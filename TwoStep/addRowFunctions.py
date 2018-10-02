@@ -28,17 +28,11 @@ def reco(row):
         elif row['diphopt'] < 200: return 7
         else: return 8
 
-def fullWeight(row):
-    if row['proc'] == 'dipho': return 3. * row['weight'] #only using 1/3 of the diphoton sample
-    else: return row['weight']
-
 def diphoWeight(row, sigWeight=1.):
     weight = row['weight']
-    if row['proc'] == 'dipho': 
-        weight *= 3. #only using 1/3 of the diphoton sample
-    elif row['proc'] == 'qcd': 
+    if row['proc'] == 'qcd': 
         weight *= 0.04 #downweight bc too few events
-    elif row['proc'] == 'ggh':
+    elif row['stage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
@@ -47,12 +41,9 @@ def diphoWeight(row, sigWeight=1.):
     return weight
 
 def normWeight(row, bkgWeight=100., zerojWeight=1.):
-    #weightFactors = [1., 0.0002994, 0.0000757, 0.0000530, 0.0000099, 0.0000029, 0.0000154, 0.0000235, 0.0000165, 0.0000104] #FIXME update these
     weightFactors = [0.0002994, 0.0000757, 0.0000530, 0.0000099, 0.0000029, 0.0000154, 0.0000235, 0.0000165, 0.0000104] #FIXME update these
     weight = row['weight']
-    if row['proc'] == 'dipho': 
-        weight *= 3. / weightFactors[ int(row['truthClass']) ] #only using 1/3 of the diphoton sample
-    elif row['proc'] == 'qcd': 
+    if row['proc'] == 'qcd': 
         weight *= 0.04 / weightFactors[ int(row['truthClass']) ] #reduce because too large by default
     else: 
         weight *= 1. / weightFactors[ int(row['truthClass']) ] #otherwise just reweight by xs
@@ -71,13 +62,11 @@ def jetWeight(row):
     weight = abs(weight)
     return weight
 
-def altDiphoWeight(row, sigWeight=1./0.0005):
+def altDiphoWeight(row, sigWeight=1./0.001169):
     weight = row['weight']
-    if row['proc'] == 'dipho':
-        weight *= 3. #only using 1/3 of the diphoton sample
-    elif row['proc'] == 'qcd':
+    if row['proc'] == 'qcd':
         weight *= 0.04 #downweight bc too few events
-    elif row['proc'] == 'ggh':
+    elif row['stage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
