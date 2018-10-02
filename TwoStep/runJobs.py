@@ -1,47 +1,26 @@
 from os import system, path, getcwd
-
-myDir = getcwd()
-
-baseDir = '/vols/cms/es811/Stage1categorisation'
-
-script   = 'diphotonCategorisation.py'
-
-#years = ['2016','2017']
-years = ['2016']
-
-paramSets = [None,'max_depth:10']
-
-#dataFrame = None
-dataFrame = 'trainTotal.pkl'
+from otherHelpers import submitJob
 
 dryRun = False
 #dryRun = True
 
-def submitJob( jobDir, theCmd, params=None ):
-  outName = '%s/sub__'%jobDir
-  if params: 
-    params = params.split(',')
-    for pair in params:
-      pair = pair.split(':')
-      outName += '%s_%s__'%(pair[0],pair[1])
-    outName = outName[:-2]
-    outName += '.sh'
-  else:
-    outName += 'None.sh'
-  with open('submitTemplate.sh') as inFile:
-    with open(outName,'w') as outFile:
-      for line in inFile.readlines():
-        if '!CMD!' in line:
-          line = line.replace('!CMD!','"%s"'%theCmd)
-        elif '!MYDIR!' in line:
-          line = line.replace('!MYDIR!',myDir)
-        elif '!NAME!' in line:
-          line = line.replace('!NAME!',outName.replace('.sh',''))
-        outFile.write(line)
-  subCmd = 'qsub -q hep.q -o %s -e %s -l h_vmem=24G %s' %(outName.replace('.sh','.log'), outName.replace('.sh','.err'), outName) 
-  print subCmd
-  if not dryRun:
-    system(subCmd)
+myDir = getcwd()
+baseDir = '/vols/cms/es811/Stage1categorisation'
+#years = ['2016','2017']
+years = ['2016']
+intLumi=None
+
+#script   = 'diphotonCategorisation.py'
+#paramSets = [None,'max_depth:10']
+#models = None
+#dataFrame = 'trainTotal.pkl'
+#signifFrame = None
+
+script   = 'dataSignificances.py'
+models = ['altDiphoModel.model','diphoModel.model']
+paramSets = None
+dataFrame = 'dataTotal.pkl'
+signifFrame = 'signifTotal.pkl'
 
 if __name__=='__main__':
   for year in years:
@@ -52,5 +31,18 @@ if __name__=='__main__':
     if dataFrame: 
       dataFrame = '%s/%s'%(trainDir.replace('trees','frames'), dataFrame)
       theCmd += '-d %s '%dataFrame
-    for params in paramSets:
-      submitJob( jobDir, theCmd, params )
+    if signifFrame: 
+      signifFrame = '%s/%s'%(trainDir.replace('trees','frames'), signifFrame)
+      theCmd += '-s %s '%signifFrame
+    if intLumi: 
+      theCmd += '--intLumi %s '%intLumi
+    if paramSets and models:
+      exit('ERROR do not expect both parameter set options and models. Exiting..')
+    elif paramSets: 
+      for params in paramSets:
+        fullCmd = theCmd + '--trainParams %s '%params
+        submitJob( jobDir, fullCmd, params=params, dryRun=dryRun )
+    elif models:
+      for model in models:
+        fullCmd = theCmd + '-m %s '%model
+        submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )

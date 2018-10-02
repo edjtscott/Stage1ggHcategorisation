@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 def prettyHist( hist ):
     hist.SetStats(0)
@@ -37,3 +38,33 @@ def computeBkg( hist, effSigma ):
 
 def jetPtToClass( jets, pt ):
   return ( (jets>0).astype(int) + (4*((jets>1).astype(int))) + ((jets>0)*(pt>60.)).astype(int) + ((jets>0)*(pt>120.)).astype(int) + ((jets>0)*(pt>200.)).astype(int) )
+
+
+def submitJob( jobDir, theCmd, params=None, model=None, dryRun=False ):
+  outName = '%s/sub__'%jobDir
+  if model:
+    outName += model.replace('.model','')
+  elif params: 
+    params = params.split(',')
+    for pair in params:
+      pair = pair.split(':')
+      outName += '%s_%s__'%(pair[0],pair[1])
+    outName = outName[:-2]
+  else:
+    outName += 'None'
+  outName += '.sh'
+  with open('submitTemplate.sh') as inFile:
+    with open(outName,'w') as outFile:
+      for line in inFile.readlines():
+        if '!CMD!' in line:
+          line = line.replace('!CMD!','"%s"'%theCmd)
+        elif '!MYDIR!' in line:
+          line = line.replace('!MYDIR!',os.getcwd())
+        elif '!NAME!' in line:
+          line = line.replace('!NAME!',outName.replace('.sh',''))
+        outFile.write(line)
+  subCmd = 'qsub -q hep.q -o %s -e %s -l h_vmem=24G %s' %(outName.replace('.sh','.log'), outName.replace('.sh','.err'), outName) 
+  print
+  print subCmd
+  if not dryRun:
+    os.system(subCmd)

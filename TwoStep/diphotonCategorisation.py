@@ -26,7 +26,8 @@ parser.add_option('--trainParams',default=None, help='Comma-separated list of co
 #setup global variables
 trainDir = opts.trainDir
 if trainDir.endswith('/'): trainDir = trainDir[:-1]
-if opts.trainParams: trainParams = opts.trainParams.split(',')
+frameDir = trainDir.replace('trees','frames')
+if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 trainFrac = 0.7
 validFrac = 0.1
 nClasses = 9
@@ -100,7 +101,6 @@ if not opts.dataFrame:
   print 'all columns added'
 
   #save as a pickle file
-  frameDir = trainDir.replace('trees','frames')
   if not path.isdir(frameDir): 
     system('mkdir -p %s'%frameDir)
   trainTotal.to_pickle('%s/trainTotal.pkl'%frameDir)
@@ -155,7 +155,7 @@ trainParams['nthread'] = 1
 paramExt = ''
 if opts.trainParams:
   paramExt = '__'
-  for pair in trainParams:
+  for pair in opts.trainParams:
     key  = pair.split(':')[0]
     data = pair.split(':')[1]
     trainParams[key] = data
