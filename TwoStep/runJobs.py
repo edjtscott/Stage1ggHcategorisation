@@ -10,17 +10,23 @@ baseDir = '/vols/cms/es811/Stage1categorisation'
 years = ['2016']
 intLumi=None
 
-#script   = 'diphotonCategorisation.py'
+#script    = 'diphotonCategorisation.py'
 #paramSets = [None,'max_depth:10']
-#models = None
+#models    = None
 #dataFrame = 'trainTotal.pkl'
-#signifFrame = None
+#sigFrame  = None
 
-script   = 'dataSignificances.py'
-models = ['altDiphoModel.model','diphoModel.model']
+#script    = 'dataSignificances.py'
+#models    = ['altDiphoModel.model','diphoModel.model']
+#paramSets = None
+#dataFrame = 'dataTotal.pkl'
+#sigFrame  = 'signifTotal.pkl'
+
+script    = 'dataMCcheckSidebands.py'
+models    = ['altDiphoModel.model','diphoModel.model']
 paramSets = None
 dataFrame = 'dataTotal.pkl'
-signifFrame = 'signifTotal.pkl'
+sigFrame  = 'trainTotal.pkl'
 
 if __name__=='__main__':
   for year in years:
@@ -29,11 +35,9 @@ if __name__=='__main__':
     trainDir  = '%s/%s/trees'%(baseDir,year)
     theCmd = 'python %s -t %s '%(script, trainDir)
     if dataFrame: 
-      dataFrame = '%s/%s'%(trainDir.replace('trees','frames'), dataFrame)
       theCmd += '-d %s '%dataFrame
-    if signifFrame: 
-      signifFrame = '%s/%s'%(trainDir.replace('trees','frames'), signifFrame)
-      theCmd += '-s %s '%signifFrame
+    if sigFrame: 
+      theCmd += '-s %s '%sigFrame
     if intLumi: 
       theCmd += '--intLumi %s '%intLumi
     if paramSets and models:

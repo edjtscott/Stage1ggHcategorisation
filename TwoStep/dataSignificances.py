@@ -29,8 +29,6 @@ trainDir = opts.trainDir
 if trainDir.endswith('/'): trainDir = trainDir[:-1]
 frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
-trainFrac = 0.7
-validFrac = 0.1
 nClasses = 9
 
 #get trees from files, put them in data frames
@@ -106,7 +104,7 @@ if not opts.dataFrame:
 
 #read in dataframe if above steps done before
 else:
-  dataTotal = pd.read_pickle(opts.dataFrame)
+  dataTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
   print 'Successfully loaded the dataframe'
 
 
@@ -133,7 +131,7 @@ if not opts.signifFrame:
 
 else:
   #read in already cleaned up signal frame
-  trainTotal = pd.read_pickle('%s/signifTotal.pkl'%frameDir)
+  trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.signifFrame))
 
 #define the variables used as input to the classifier
 diphoX  = trainTotal[diphoVars].values

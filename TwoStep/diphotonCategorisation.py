@@ -30,7 +30,6 @@ frameDir = trainDir.replace('trees','frames')
 if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 trainFrac = 0.7
 validFrac = 0.1
-nClasses = 9
 
 #get trees from files, put them in data frames
 #procFileMap = {'ggh':'ggH.root', 'dipho':'Dipho.root', 'gjet':'GJet.root', 'qcd':'QCD.root'}
