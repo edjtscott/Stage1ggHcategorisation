@@ -8,7 +8,7 @@ myDir = getcwd()
 baseDir = '/vols/cms/es811/Stage1categorisation'
 #years = ['2016','2017']
 years = ['2016']
-intLumi=None
+intLumi = None
 
 #script    = 'diphotonCategorisation.py'
 #paramSets = [None,'max_depth:10']
@@ -22,17 +22,24 @@ intLumi=None
 #dataFrame = 'dataTotal.pkl'
 #sigFrame  = 'signifTotal.pkl'
 
-script    = 'dataMCcheckSidebands.py'
-models    = ['altDiphoModel.model','diphoModel.model']
+#script    = 'dataMCcheckSidebands.py'
+#models    = ['altDiphoModel.model','diphoModel.model']
+#paramSets = None
+#dataFrame = 'dataTotal.pkl'
+#sigFrame  = 'trainTotal.pkl'
+
+script    = 'dataSignificancesVBF.py'
+models    = [None,'altDiphoModel.model','diphoModel.model']
 paramSets = None
-dataFrame = 'dataTotal.pkl'
-sigFrame  = 'trainTotal.pkl'
+dataFrame = None
+sigFrame  = None
 
 if __name__=='__main__':
   for year in years:
     jobDir = '%s/Jobs/%s/%s' % (myDir, script.replace('.py',''), year)
     if not path.isdir( jobDir ): system('mkdir -p %s'%jobDir)
-    trainDir  = '%s/%s/trees'%(baseDir,year)
+    #trainDir  = '%s/%s/trees'%(baseDir,year) #FIXME
+    trainDir  = '%s/%s/ForVBF/trees'%(baseDir,year)
     theCmd = 'python %s -t %s '%(script, trainDir)
     if dataFrame: 
       theCmd += '-d %s '%dataFrame
@@ -44,9 +51,11 @@ if __name__=='__main__':
       exit('ERROR do not expect both parameter set options and models. Exiting..')
     elif paramSets: 
       for params in paramSets:
-        fullCmd = theCmd + '--trainParams %s '%params
+        fullCmd = theCmd 
+        if params: fullCmd += '--trainParams %s '%params
         submitJob( jobDir, fullCmd, params=params, dryRun=dryRun )
     elif models:
       for model in models:
-        fullCmd = theCmd + '-m %s '%model
+        fullCmd = theCmd
+        if model: fullCmd += '-m %s '%model
         submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
