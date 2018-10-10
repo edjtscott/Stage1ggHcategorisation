@@ -214,4 +214,59 @@ for iProc in range(nClasses):
   printStr += 'cutLo %1.3f, Slo %1.2f, Blo %1.2f, signifLo %1.2f \n'%(bestCutLo,bestSlo,bestBlo,bestSignifLo)
   printStr += '\n'
 
+  #now do some checking that random search found a good minimum
+  printStr += 'Stability check low cut (cutval,signif): \n'
+  for cutLo in np.arange(bestCutLo-0.1, bestCutLo+0.1, 0.01): 
+    cutHi = bestCutHi
+    sigHistHi = r.TH1F('sigHistHiTemp','sigHistHiTemp',160,100,180)
+    sigWeightsHi = diphoFW * (diphoY==1) * (diphoS-3==iProc) * (diphoPredY>cutHi) * (diphoR==iProc)
+    fill_hist(sigHistHi, diphoM, weights=sigWeightsHi)
+    sigCountHi = 0.68 * lumi * sigHistHi.Integral() 
+    sigWidthHi = getRealSigma(sigHistHi)
+    bkgHistHi = r.TH1F('bkgHistHiTemp','bkgHistHiTemp',160,100,180)
+    bkgWeightsHi = dataFW * (dataPredY>cutHi) * (dataR==iProc)
+    fill_hist(bkgHistHi, dataM, weights=bkgWeightsHi)
+    bkgCountHi = computeBkg(bkgHistHi, sigWidthHi)
+    theSignifHi = getAMS(sigCountHi, bkgCountHi)
+    sigHistLo = r.TH1F('sigHistLoTemp','sigHistLoTemp',160,100,180)
+    sigWeightsLo = diphoFW * (diphoY==1) * (diphoS-3==iProc) * (diphoPredY<cutHi) * (diphoPredY>cutLo) * (diphoR==iProc)
+    fill_hist(sigHistLo, diphoM, weights=sigWeightsLo)
+    sigCountLo = 0.68 * lumi * sigHistLo.Integral() 
+    sigWidthLo = getRealSigma(sigHistLo)
+    #print 'sigwidth is %1.3f'%sigWidth
+    bkgHistLo = r.TH1F('bkgHistLoTemp','bkgHistLoTemp',160,100,180)
+    bkgWeightsLo = dataFW * (dataPredY<cutHi) * (dataPredY>cutLo) * (dataR==iProc)
+    fill_hist(bkgHistLo, dataM, weights=bkgWeightsLo)
+    bkgCountLo = computeBkg(bkgHistLo, sigWidthLo)
+    theSignifLo = getAMS(sigCountLo, bkgCountLo)
+    theSignif = np.sqrt( theSignifLo*theSignifLo + theSignifHi*theSignifHi )
+    printStr += '(%1.3f,%1.3f), '%(cutLo,theSignif)
+  printStr += '\nStability check high cut (cutval,signif): \n'
+  for cutHi in np.arange(bestCutHi-0.1, bestCutHi+0.1, 0.01): 
+    cutLo = bestCutLo
+    sigHistHi = r.TH1F('sigHistHiTemp','sigHistHiTemp',160,100,180)
+    sigWeightsHi = diphoFW * (diphoY==1) * (diphoS-3==iProc) * (diphoPredY>cutHi) * (diphoR==iProc)
+    fill_hist(sigHistHi, diphoM, weights=sigWeightsHi)
+    sigCountHi = 0.68 * lumi * sigHistHi.Integral() 
+    sigWidthHi = getRealSigma(sigHistHi)
+    bkgHistHi = r.TH1F('bkgHistHiTemp','bkgHistHiTemp',160,100,180)
+    bkgWeightsHi = dataFW * (dataPredY>cutHi) * (dataR==iProc)
+    fill_hist(bkgHistHi, dataM, weights=bkgWeightsHi)
+    bkgCountHi = computeBkg(bkgHistHi, sigWidthHi)
+    theSignifHi = getAMS(sigCountHi, bkgCountHi)
+    sigHistLo = r.TH1F('sigHistLoTemp','sigHistLoTemp',160,100,180)
+    sigWeightsLo = diphoFW * (diphoY==1) * (diphoS-3==iProc) * (diphoPredY<cutHi) * (diphoPredY>cutLo) * (diphoR==iProc)
+    fill_hist(sigHistLo, diphoM, weights=sigWeightsLo)
+    sigCountLo = 0.68 * lumi * sigHistLo.Integral() 
+    sigWidthLo = getRealSigma(sigHistLo)
+    #print 'sigwidth is %1.3f'%sigWidth
+    bkgHistLo = r.TH1F('bkgHistLoTemp','bkgHistLoTemp',160,100,180)
+    bkgWeightsLo = dataFW * (dataPredY<cutHi) * (dataPredY>cutLo) * (dataR==iProc)
+    fill_hist(bkgHistLo, dataM, weights=bkgWeightsLo)
+    bkgCountLo = computeBkg(bkgHistLo, sigWidthLo)
+    theSignifLo = getAMS(sigCountLo, bkgCountLo)
+    theSignif = np.sqrt( theSignifLo*theSignifLo + theSignifHi*theSignifHi )
+    printStr += '(%1.3f,%1.3f), '%(cutHi,theSignif)
+  printStr += '\n\n'
+
 print printStr

@@ -7,20 +7,27 @@ dryRun = False
 myDir = getcwd()
 baseDir = '/vols/cms/es811/Stage1categorisation'
 #years = ['2016','2017']
-years = ['2016']
-intLumi = None
 
-#script    = 'diphotonCategorisation.py'
-#paramSets = [None,'max_depth:10']
-#models    = None
+years = ['2016']
+intLumi = 35.9
+
+#years = ['2017']
+#intLumi = 41.5
+
+script    = 'diphotonCategorisation.py'
+paramSets = [None,'max_depth:10']
+models    = None
 #dataFrame = 'trainTotal.pkl'
-#sigFrame  = None
+dataFrame = None
+sigFrame  = None
 
 #script    = 'dataSignificances.py'
 #models    = ['altDiphoModel.model','diphoModel.model']
 #paramSets = None
 #dataFrame = 'dataTotal.pkl'
+##dataFrame = None
 #sigFrame  = 'signifTotal.pkl'
+##sigFrame  = None
 
 #script    = 'dataMCcheckSidebands.py'
 #models    = ['altDiphoModel.model','diphoModel.model']
@@ -28,18 +35,18 @@ intLumi = None
 #dataFrame = 'dataTotal.pkl'
 #sigFrame  = 'trainTotal.pkl'
 
-script    = 'dataSignificancesVBF.py'
-models    = [None,'altDiphoModel.model','diphoModel.model']
-paramSets = None
-dataFrame = None
-sigFrame  = None
+#script    = 'dataSignificancesVBF.py'
+#models    = [None,'altDiphoModel.model','diphoModel.model']
+#paramSets = None
+#dataFrame = None
+#sigFrame  = None
 
 if __name__=='__main__':
   for year in years:
     jobDir = '%s/Jobs/%s/%s' % (myDir, script.replace('.py',''), year)
     if not path.isdir( jobDir ): system('mkdir -p %s'%jobDir)
-    #trainDir  = '%s/%s/trees'%(baseDir,year) #FIXME
-    trainDir  = '%s/%s/ForVBF/trees'%(baseDir,year)
+    trainDir  = '%s/%s/trees'%(baseDir,year)
+    if 'VBF' in script: trainDir  = '%s/%s/ForVBF/trees'%(baseDir,year) #FIXME
     theCmd = 'python %s -t %s '%(script, trainDir)
     if dataFrame: 
       theCmd += '-d %s '%dataFrame

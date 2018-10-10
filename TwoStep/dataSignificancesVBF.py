@@ -20,7 +20,7 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if it already exists')
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
 parser.add_option('-m','--modelName', default=None, help='Name of model for testing')
-parser.add_option('-n','--nIterations', default=1000, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=5000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -306,6 +306,66 @@ for i in range(opts.nIterations):
     bestDiphoCutLo = diphoCutLo
     bestDiphoCutHi = diphoCutHi
 printStr +=  'total significance for high ptHjj bin is %1.3f\n'%bestSignif
+printStr +=  'cutHi %1.3f, diphoCutHi %1.3f, Shi %1.2f, Bhi %1.2f, signifHi %1.2f\n'%(bestCutHi,diphoCutHi,bestSHi,bestBHi,bestSignifHi)
+printStr +=  'cutLo %1.3f, diphoCutLo %1.3f, Slo %1.2f, Blo %1.2f, signifLo %1.2f\n'%(bestCutLo,diphoCutLo,bestSLo,bestBLo,bestSignifLo)
+printStr += '\n'
+
+#repeat with no ptHjj cut
+bestCutLo = -.1
+bestSignifLo = -1.
+bestSLo = -1.
+bestBLo = -1.
+bestCutHi = -.1
+bestSignifHi = -1.
+bestSHi = -1.
+bestBHi = -1.
+bestSignif = -1.
+bestDiphoCutLo = -.1
+bestDiphoCutHi = -.1
+for i in range(opts.nIterations):
+  if i%100==0: print 'processing iteration %g'%i
+  cuts = np.random.uniform(-1., 1., 2)
+  diphoCuts = np.random.uniform(0.6, 1., 2)
+  cuts.sort()
+  diphoCuts.sort()
+  lowCut  = cuts[0]
+  highCut = cuts[1]
+  diphoCutLo = diphoCuts[0]
+  diphoCutHi = diphoCuts[1]
+  sigHistHi = r.TH1F('sigHistHiTemp','sigHistHiTemp',160,100,180)
+  sigWeightsHi = diphoFW * (diphoP>11) * (diphoP<17) * (diphoV>highCut) * (diphoD>diphoCutHi)
+  fill_hist(sigHistHi, diphoM, weights=sigWeightsHi)
+  sigCountHi = 0.68 * lumi * sigHistHi.Integral() 
+  sigWidthHi = getRealSigma(sigHistHi)
+  bkgHistHi = r.TH1F('bkgHistHiTemp','bkgHistHiTemp',160,100,180)
+  bkgWeightsHi = dataFW * (dataV>highCut) * (dataD>diphoCutHi)
+  fill_hist(bkgHistHi, dataM, weights=bkgWeightsHi)
+  bkgCountHi = computeBkg(bkgHistHi, sigWidthHi)
+  theSignifHi = getAMS(sigCountHi, bkgCountHi)
+  sigHistLo = r.TH1F('sigHistLoTemp','sigHistLoTemp',160,100,180)
+  sigWeightsLo = diphoFW * (diphoP>11) * (diphoP<17) * (diphoV<highCut) * (diphoV>lowCut) * (diphoD>diphoCutLo)
+  fill_hist(sigHistLo, diphoM, weights=sigWeightsLo)
+  sigCountLo = 0.68 * lumi * sigHistLo.Integral()
+  sigWidthLo = getRealSigma(sigHistLo)
+  bkgHistLo = r.TH1F('bkgHistLoTemp','bkgHistLoTemp',160,100,180)
+  bkgWeightsLo = dataFW * (dataV>lowCut) * (dataV<highCut) * (dataD>diphoCutLo)
+  fill_hist(bkgHistLo, dataM, weights=bkgWeightsLo)
+  bkgCountLo = computeBkg(bkgHistLo, sigWidthLo)
+  theSignifLo = getAMS(sigCountLo, bkgCountLo)
+  theSignif = np.sqrt(theSignifLo*theSignifLo + theSignifHi*theSignifHi)
+  if theSignif > bestSignif: 
+    bestCutLo = lowCut
+    bestSignifLo = theSignifLo
+    bestSLo = sigCountLo
+    bestBLo = bkgCountLo
+    bestCutHi = highCut
+    bestSignifHi = theSignifHi
+    bestSHi = sigCountHi
+    bestBHi = bkgCountHi
+    bestSignif = theSignif
+    bestDiphoCutLo = diphoCutLo
+    bestDiphoCutHi = diphoCutHi
+printStr +=  'total significance with no ptHjj cut is %1.3f\n'%bestSignif
 printStr +=  'cutHi %1.3f, diphoCutHi %1.3f, Shi %1.2f, Bhi %1.2f, signifHi %1.2f\n'%(bestCutHi,diphoCutHi,bestSHi,bestBHi,bestSignifHi)
 printStr +=  'cutLo %1.3f, diphoCutLo %1.3f, Slo %1.2f, Blo %1.2f, signifLo %1.2f\n'%(bestCutLo,diphoCutLo,bestSLo,bestBLo,bestSignifLo)
 printStr += '\n'

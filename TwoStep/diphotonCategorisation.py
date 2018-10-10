@@ -32,7 +32,6 @@ trainFrac = 0.7
 validFrac = 0.1
 
 #get trees from files, put them in data frames
-#procFileMap = {'ggh':'ggH.root', 'dipho':'Dipho.root', 'gjet':'GJet.root', 'qcd':'QCD.root'}
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'tth':'ttH.root', 'wzh':'VH.root', 'dipho':'Dipho.root', 'gjet':'GJet.root', 'qcd':'QCD.root'}
 theProcs = procFileMap.keys()
 
