@@ -29,7 +29,11 @@ trainDir = opts.trainDir
 if trainDir.endswith('/'): trainDir = trainDir[:-1]
 frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
+plotDir  = trainDir.replace('trees','plots')
 nClasses = 9
+
+#put root in batch mode
+r.gROOT.SetBatch(True)
 
 #get trees from files, put them in data frames
 procFileMap = {'Data':'Data.root'}
@@ -215,8 +219,13 @@ for iProc in range(nClasses):
   printStr += '\n'
 
   #now do some checking that random search found a good minimum
-  printStr += 'Stability check low cut (cutval,signif): \n'
-  for cutLo in np.arange(bestCutLo-0.1, bestCutLo+0.1, 0.01): 
+  cutLoCheck = r.TGraph()
+  cutLoCheck.SetName('cutLoCheck_%g'%iProc)
+  useSty.formatHisto(cutLoCheck.GetHistogram())
+  cutLoCheck.GetXaxis().SetTitle('Change in cut')
+  cutLoCheck.GetYaxis().SetTitle('Significance')
+  cutLoCheck.SetTitle('')
+  for iCutLo,cutLo in enumerate(np.arange(bestCutLo-0.1, bestCutLo+0.1, 0.01)):
     cutHi = bestCutHi
     sigHistHi = r.TH1F('sigHistHiTemp','sigHistHiTemp',160,100,180)
     sigWeightsHi = diphoFW * (diphoY==1) * (diphoS-3==iProc) * (diphoPredY>cutHi) * (diphoR==iProc)
@@ -240,9 +249,22 @@ for iProc in range(nClasses):
     bkgCountLo = computeBkg(bkgHistLo, sigWidthLo)
     theSignifLo = getAMS(sigCountLo, bkgCountLo)
     theSignif = np.sqrt( theSignifLo*theSignifLo + theSignifHi*theSignifHi )
-    printStr += '(%1.3f,%1.3f), '%(cutLo,theSignif)
-  printStr += '\nStability check high cut (cutval,signif): \n'
-  for cutHi in np.arange(bestCutHi-0.1, bestCutHi+0.1, 0.01): 
+    cutLoCheck.SetPoint(iCutLo, cutLo - bestCutLo, theSignif)
+  theCanv = useSty.setCanvas()
+  cutLoCheck.Draw()
+  useSty.drawCMS()
+  useSty.drawEnPu(lumi='%2.1f fb^{-1}'%opts.intLumi)
+  theCanv.Print('%s/%s__%s.pdf'%(plotDir, opts.modelName, cutLoCheck.GetName()))
+  theCanv.Print('%s/%s__%s.png'%(plotDir, opts.modelName, cutLoCheck.GetName()))
+
+  #and for the high cut
+  cutHiCheck = r.TGraph()
+  cutHiCheck.SetName('cutHiCheck_%g'%iProc)
+  useSty.formatHisto(cutHiCheck.GetHistogram())
+  cutHiCheck.GetXaxis().SetTitle('Change in cut')
+  cutHiCheck.GetYaxis().SetTitle('Significance')
+  cutHiCheck.SetTitle('')
+  for iCutHi,cutHi in enumerate(np.arange(bestCutHi-0.1, bestCutHi+0.1, 0.01)):
     cutLo = bestCutLo
     sigHistHi = r.TH1F('sigHistHiTemp','sigHistHiTemp',160,100,180)
     sigWeightsHi = diphoFW * (diphoY==1) * (diphoS-3==iProc) * (diphoPredY>cutHi) * (diphoR==iProc)
@@ -266,7 +288,12 @@ for iProc in range(nClasses):
     bkgCountLo = computeBkg(bkgHistLo, sigWidthLo)
     theSignifLo = getAMS(sigCountLo, bkgCountLo)
     theSignif = np.sqrt( theSignifLo*theSignifLo + theSignifHi*theSignifHi )
-    printStr += '(%1.3f,%1.3f), '%(cutHi,theSignif)
-  printStr += '\n\n'
+    cutHiCheck.SetPoint(iCutHi, cutHi - bestCutHi, theSignif)
+  theCanv = useSty.setCanvas()
+  cutHiCheck.Draw()
+  useSty.drawCMS()
+  useSty.drawEnPu(lumi='%2.1f fb^{-1}'%opts.intLumi)
+  theCanv.Print('%s/%s__%s.pdf'%(plotDir, opts.modelName, cutHiCheck.GetName()))
+  theCanv.Print('%s/%s__%s.png'%(plotDir, opts.modelName, cutHiCheck.GetName()))
 
 print printStr
