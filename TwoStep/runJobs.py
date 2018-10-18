@@ -35,7 +35,6 @@ sigFrame  = None
 #  name += '.model'
 #  models.append(name)
 #  models.append(name.replace('dipho','altDipho'))
-#print models
 #paramSets = None
 ##dataFrame = 'dataTotal.pkl'
 #dataFrame = None
@@ -62,10 +61,26 @@ sigFrame  = None
 #  name += '.model'
 #  models.append(name)
 #  models.append(name.replace('dipho','altDipho'))
-#print models
 #paramSets = None
-#dataFrame = None
+##dataFrame = None
+#dataFrame = 'dataTotal.pkl'
+##sigFrame  = None
+#sigFrame  = 'vbfTotal.pkl'
+
+#script    = 'combinedBDT.py'
+#paramSets = None
+#models    = [None,'altDiphoModel.model']
+##dataFrame = None
+#dataFrame = 'combinedTotal.pkl'
 #sigFrame  = None
+
+#script    = 'dataSignificancesVBFcombined.py'
+#models = [None,'altDiphoModel.model']
+#paramSets = None
+##dataFrame = None
+#dataFrame = 'dataTotal.pkl'
+##sigFrame  = None
+#sigFrame  = 'vbfTotal.pkl'
 
 if __name__=='__main__':
   for year in years:

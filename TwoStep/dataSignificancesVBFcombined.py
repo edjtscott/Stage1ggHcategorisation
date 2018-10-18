@@ -20,7 +20,7 @@ parser = OptionParser()
 parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if it already exists')
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
-parser.add_option('-m','--modelName', default=None, help='Name of model for testing')
+parser.add_option('-m','--modelName', default=None, help='Name of diphoton model for testing')
 parser.add_option('-n','--nIterations', default=10000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
@@ -30,6 +30,9 @@ trainDir = opts.trainDir
 if trainDir.endswith('/'): trainDir = trainDir[:-1]
 frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models').replace('ForVBF/','')
+combinedName = 'combinedModel.model'
+if opts.modelName:
+  combinedName = 'combinedModel__%s'%opts.modelName
 
 #define the different sets of variables used
 diphoVars  = ['leadmva','subleadmva','leadptom','subleadptom',
@@ -168,41 +171,58 @@ else:
 diphoM  = trainTotal['CMS_hgg_mass'].values
 diphoFW = trainTotal['weight'].values
 diphoP  = trainTotal['stage1cat'].values
-diphoV  = trainTotal['VBFMVAValue'].values
 diphoH  = trainTotal['ptHjj'].values
 diphoJ  = trainTotal['dijet_Mjj'].values
 
 dataM  = dataTotal['CMS_hgg_mass'].values
 dataFW = np.ones(dataM.shape[0])
-dataV  = dataTotal['VBFMVAValue'].values
 dataH  = dataTotal['ptHjj'].values
 dataJ  = dataTotal['dijet_Mjj'].values
 
 # either use what is already packaged up or perform inference
-if not opts.modelName:
-  diphoD  = trainTotal['diphomvaxgb'].values
-  dataD  = dataTotal['diphomvaxgb'].values
-else:
+if opts.modelName:
   diphoX = trainTotal[diphoVars].values
   dataX  = dataTotal[diphoVars].values
   diphoMatrix = xg.DMatrix(diphoX, label=diphoP, weight=diphoFW, feature_names=diphoVars)
   dataMatrix  = xg.DMatrix(dataX,  label=dataFW, weight=dataFW,  feature_names=diphoVars)
   diphoModel = xg.Booster()
   diphoModel.load_model('%s/%s'%(modelDir,opts.modelName))
-  diphoD = diphoModel.predict(diphoMatrix)
-  dataD  = diphoModel.predict(dataMatrix)
+  trainTotal['diphomvainferred'] = diphoModel.predict(diphoMatrix)
+  dataTotal['diphomvainferred']  = diphoModel.predict(dataMatrix)
+
+# either use what is already packaged up or perform inference for diphoton BDT
+if not opts.modelName:
+  combinedVars = ['VBFMVAValue','diphomvaxgb','leadptom','subleadptom']
+  diphoX  = trainTotal[combinedVars].values
+  dataX   = dataTotal[combinedVars].values
+  diphoMatrix = xg.DMatrix(diphoX, label=diphoP, weight=diphoFW, feature_names=combinedVars)
+  dataMatrix  = xg.DMatrix(dataX,  label=dataFW, weight=dataFW,  feature_names=combinedVars)
+  combinedModel = xg.Booster()
+  combinedModel.load_model('%s/%s'%(modelDir,combinedName))
+  diphoC = combinedModel.predict(diphoMatrix)
+  dataC  = combinedModel.predict(dataMatrix)
+else:
+  combinedVars = ['VBFMVAValue','diphomvainferred','leadptom','subleadptom']
+  diphoX  = trainTotal[combinedVars].values
+  dataX   = dataTotal[combinedVars].values
+  diphoMatrix = xg.DMatrix(diphoX, label=diphoP, weight=diphoFW, feature_names=combinedVars)
+  dataMatrix  = xg.DMatrix(dataX,  label=dataFW, weight=dataFW,  feature_names=combinedVars)
+  combinedModel = xg.Booster()
+  combinedModel.load_model('%s/%s'%(modelDir,combinedName))
+  diphoC = combinedModel.predict(diphoMatrix)
+  dataC  = combinedModel.predict(dataMatrix)
 
 #now estimate significance using the amount of background in a plus/mins 1 sigma window
 #set up parameters for the optimiser
 ptHjjCut = 25.
-ranges = [ [-0.9,1.], [0.5,1.] ]
-names  = ['DijetBDT','DiphotonBDT']
+ranges = [ [-1,1.] ]
+names  = ['CombinedBDT']
 printStr = ''
 
 #first the low ptHjj bin
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH<ptHjjCut)
 bkgWeights = dataFW * (dataH<ptHjjCut)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 2, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for low ptHjj bin are: \n'
 printStr += optimiser.getPrintableResult()
@@ -210,7 +230,7 @@ printStr += optimiser.getPrintableResult()
 #and now the high bin
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH>ptHjjCut)
 bkgWeights = dataFW * (dataH>ptHjjCut)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 2, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for high ptHjj bin are: \n'
 printStr += optimiser.getPrintableResult()
@@ -218,7 +238,7 @@ printStr += optimiser.getPrintableResult()
 #repeat with no ptHjj cut
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17)
 bkgWeights = dataFW
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 2, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results with no ptHjj cut are: \n'
 printStr += optimiser.getPrintableResult()
@@ -226,7 +246,7 @@ printStr += optimiser.getPrintableResult()
 #repeat with no ptHjj cut, three-cat version
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17)
 bkgWeights = dataFW
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 3, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 3, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results with no ptHjj cut are: \n'
 printStr += optimiser.getPrintableResult()
@@ -234,7 +254,7 @@ printStr += optimiser.getPrintableResult()
 #all three again with mjj cut increased to 400
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH<ptHjjCut) * (diphoJ>400)
 bkgWeights = dataFW * (dataH<ptHjjCut) * (dataJ>400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 2, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for low ptHjj bin with mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
@@ -242,7 +262,7 @@ printStr += optimiser.getPrintableResult()
 #and now the high bin
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH>ptHjjCut) * (diphoJ>400)
 bkgWeights = dataFW * (dataH>ptHjjCut) * (dataJ>400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 2, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for high ptHjj bin with mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
@@ -250,7 +270,7 @@ printStr += optimiser.getPrintableResult()
 #no ptHjj cut and mjj > 400
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>400)
 bkgWeights = dataFW * (dataJ>400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 2, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results with no ptHjj cut and mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
@@ -258,7 +278,7 @@ printStr += optimiser.getPrintableResult()
 #no ptHjj cut and mjj > 400
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>400)
 bkgWeights = dataFW * (dataJ>400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 3, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 3, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results with no ptHjj cut and mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
@@ -266,7 +286,7 @@ printStr += optimiser.getPrintableResult()
 # test a version targeting "VBF rest" bin - one cat only
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>250) * (diphoJ<400)
 bkgWeights = dataFW * (dataJ>250) * (dataJ<400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 1, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 1, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for the VBF rest bin are: \n'
 printStr += optimiser.getPrintableResult()
@@ -274,7 +294,7 @@ printStr += optimiser.getPrintableResult()
 # test a version targeting "VBF rest" bin - two cats
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>250) * (diphoJ<400)
 bkgWeights = dataFW * (dataJ>250) * (dataJ<400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, diphoM, [diphoC], bkgWeights, dataM, [dataC], 2, ranges, names)
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for the VBF rest bin are: \n'
 printStr += optimiser.getPrintableResult()
