@@ -40,6 +40,13 @@ def diphoWeight(row, sigWeight=1.):
     weight = abs(weight)
     return weight
 
+def combinedWeight(row):
+    weight = row['weight']
+    if row['proc'] == 'qcd': 
+        weight *= 0.04 #downweight bc too few events
+    weight = abs(weight)
+    return weight
+
 def normWeight(row, bkgWeight=100., zerojWeight=1.):
     weightFactors = [0.0002994, 0.0000757, 0.0000530, 0.0000099, 0.0000029, 0.0000154, 0.0000235, 0.0000165, 0.0000104] #FIXME update these
     weight = row['weight']

@@ -20,7 +20,6 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', help='Name of data dataframe')
 parser.add_option('-s','--signalFrame', help='Name of signal dataframe')
 parser.add_option('-m','--modelName', help='Name of model for testing')
-parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
 #setup global variables
