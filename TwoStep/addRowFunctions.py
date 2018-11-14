@@ -63,7 +63,7 @@ def normWeight(row, bkgWeight=100., zerojWeight=1.):
     return weight
 
 def jetWeight(row):
-    weightFactors = [0.0002994, 0.0000757+0.0000530+0.0000099+0.0000029, 0.0000154+0.0000235+0.0000165+0.0000104] #FIXME update these
+    weightFactors = [0.606560, 0.270464, 0.122976]
     weight = row['weight']
     weight *= 1. / weightFactors[ int(row['truthJets']) ] #otherwise just reweight by xs
     weight = abs(weight)
