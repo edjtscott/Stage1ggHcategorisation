@@ -14,10 +14,17 @@ intLumi = 35.9
 #years = ['2017']
 #intLumi = 41.5
 
-script    = 'diphotonCategorisation.py'
-paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#script    = 'diphotonCategorisation.py'
+#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+##dataFrame = 'trainTotal.pkl'
+#dataFrame = None
+#sigFrame  = None
+
+script    = 'nJetCategorisation.py'
+paramSets = [None,'max_depth:3']
 models    = None
-#dataFrame = 'trainTotal.pkl'
+#dataFrame = 'jetTotal.pkl'
 dataFrame = None
 sigFrame  = None
 
