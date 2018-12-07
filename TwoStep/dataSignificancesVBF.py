@@ -37,7 +37,8 @@ diphoVars  = ['leadmva','subleadmva','leadptom','subleadptom',
               'CosPhi','vtxprob','sigmarv','sigmawv']
 
 #get trees from files, put them in data frames
-procFileMap = {'vbf':'VBF.root'}
+#procFileMap = {'vbf':'VBF.root'}
+procFileMap = {'ggh':'ggH.root','vbf':'VBF.root'}
 theProcs = procFileMap.keys()
 dataFileMap = {'Data':'Data.root'}
 
@@ -207,6 +208,16 @@ optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for low ptHjj bin are: \n'
 printStr += optimiser.getPrintableResult()
 
+#first the low ptHjj bin
+sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH<ptHjjCut)
+bkgWeights = dataFW * (dataH<ptHjjCut)
+nonSigWeights = diphoFW * (diphoP<12) * (diphoP>2) * (diphoH<ptHjjCut)
+optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser.setNonSig(nonSigWeights, diphoM, [diphoV,diphoD])
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for low ptHjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+
 #and now the high bin
 sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH>ptHjjCut)
 bkgWeights = dataFW * (dataH>ptHjjCut)
@@ -279,4 +290,6 @@ optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for the VBF rest bin are: \n'
 printStr += optimiser.getPrintableResult()
 
+print
 print printStr
+print

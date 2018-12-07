@@ -14,15 +14,17 @@ class Bests:
     self.totSignif = -999.
     self.sigs      = [-999. for i in range(self.nCats)]
     self.bkgs      = [-999. for i in range(self.nCats)]
+    self.nons      = [-999. for i in range(self.nCats)]
     self.signifs   = [-999. for i in range(self.nCats)]
 
-  def update(self, sigs, bkgs):
+  def update(self, sigs, bkgs, nons):
     signifs = []
     totSignifSq = 0.
     for i in range(self.nCats):
       sig = sigs[i] 
       bkg = bkgs[i] 
-      signif = self.getAMS(sig, bkg)
+      non = nons[i] 
+      signif = self.getAMS(sig, bkg+non)
       signifs.append(signif)
       totSignifSq += signif*signif
     totSignif = np.sqrt( totSignifSq )
@@ -31,6 +33,7 @@ class Bests:
       for i in range(self.nCats):
         self.sigs[i]     = sigs[i]
         self.bkgs[i]     = bkgs[i]
+        self.nons[i]     = nons[i]
         self.signifs[i]  = signifs[i]
       return True
     else:
@@ -79,22 +82,26 @@ class CatOptim:
 
   def __init__(self, sigWeights, sigMass, sigDiscrims, bkgWeights, bkgMass, bkgDiscrims, nCats, ranges, names):
     '''Initialise with the signal and background weights (as np arrays), then three lists: the discriminator arrays, the ranges (in the form [low, high]) and the names'''
-    self.sigWeights  = sigWeights
-    self.sigMass     = sigMass
-    self.bkgWeights  = bkgWeights
-    self.bkgMass     = bkgMass
-    self.nCats       = int(nCats)
-    self.bests       = Bests(self.nCats)
-    self.sortOthers  = False
+    self.sigWeights    = sigWeights
+    self.sigMass       = sigMass
+    self.bkgWeights    = bkgWeights
+    self.bkgMass       = bkgMass
+    self.nonSigWeights = None
+    self.nonSigMass    = None
+    self.nCats         = int(nCats)
+    self.bests         = Bests(self.nCats)
+    self.sortOthers    = False
+    self.addNonSig     = False
     assert len(bkgDiscrims) == len(sigDiscrims)
     assert len(ranges)      == len(sigDiscrims)
     assert len(names)       == len(sigDiscrims)
-    self.names       = names
-    self.sigDiscrims = od()
-    self.bkgDiscrims = od()
-    self.lows        = od()
-    self.highs       = od()
-    self.boundaries  = od()
+    self.names          = names
+    self.sigDiscrims    = od()
+    self.bkgDiscrims    = od()
+    self.nonSigDiscrims = None
+    self.lows           = od()
+    self.highs          = od()
+    self.boundaries     = od()
     for iName,name in enumerate(self.names):
       self.sigDiscrims[ name ] = sigDiscrims[iName]
       self.bkgDiscrims[ name ] = bkgDiscrims[iName]
@@ -102,6 +109,14 @@ class CatOptim:
       self.lows[ name ]       = ranges[iName][0]
       self.highs[ name ]      = ranges[iName][1]
       self.boundaries[ name ] = [-999. for i in range(self.nCats)]
+
+  def setNonSig(self, nonSigWeights, nonSigMass, nonSigDiscrims):
+    self.addNonSig      = True
+    self.nonSigWeights  = nonSigWeights
+    self.nonSigMass     = nonSigMass
+    self.nonSigDiscrims = od()
+    for iName,name in enumerate(self.names):
+      self.nonSigDiscrims[ name ] = nonSigDiscrims[iName]
 
   def optimise(self, lumi, nIters):
     '''Run the optimisation for a given number of iterations'''
@@ -114,17 +129,21 @@ class CatOptim:
         cuts[name] = tempCuts
       sigs = []
       bkgs = []
+      nons = []
       for iCat in range(self.nCats):
         lastCat = (iCat+1 == self.nCats)
         sigWeights = self.sigWeights
         bkgWeights = self.bkgWeights
+        if self.addNonSig: nonSigWeights = self.nonSigWeights
         for iName,name in enumerate(self.names):
           sigWeights = sigWeights * (self.sigDiscrims[name]>cuts[name][iCat])
           bkgWeights = bkgWeights * (self.bkgDiscrims[name]>cuts[name][iCat])
+          if self.addNonSig: nonSigWeights = nonSigWeights * (self.nonSigDiscrims[name]>cuts[name][iCat])
           if not lastCat:
             if iName==0 or self.sortOthers:
               sigWeights = sigWeights * (self.sigDiscrims[name]<cuts[name][iCat+1])
               bkgWeights = bkgWeights * (self.bkgDiscrims[name]<cuts[name][iCat+1])
+              if self.addNonSig: nonSigWeights = nonSigWeights * (self.nonSigDiscrims[name]<cuts[name][iCat+1])
         sigHist = r.TH1F('sigHistTemp','sigHistTemp',160,100,180)
         fill_hist(sigHist, self.sigMass, weights=sigWeights)
         sigCount = 0.68 * lumi * sigHist.Integral() 
@@ -132,9 +151,16 @@ class CatOptim:
         bkgHist = r.TH1F('bkgHistTemp','bkgHistTemp',160,100,180)
         fill_hist(bkgHist, self.bkgMass, weights=bkgWeights)
         bkgCount = self.computeBkg(bkgHist, sigWidth)
+        if self.addNonSig:
+          nonSigHist = r.TH1F('nonSigHistTemp','nonSigHistTemp',160,100,180)
+          fill_hist(nonSigHist, self.nonSigMass, weights=nonSigWeights)
+          nonSigCount = 0.68 * lumi * nonSigHist.Integral() 
+        else:
+          nonSigCount = 0.
         sigs.append(sigCount)
         bkgs.append(bkgCount)
-      if self.bests.update(sigs, bkgs):
+        nons.append(nonSigCount)
+      if self.bests.update(sigs, bkgs, nons):
         for name in self.names:
           self.boundaries[name] = cuts[name]
 
@@ -153,7 +179,7 @@ class CatOptim:
         printStr += '%s %1.3f,  '%(name, self.boundaries[name][iCat])
       printStr = printStr[:-3]
       printStr += '\n'
-      printStr += 'With  S %1.3f,  B %1.3f,  signif = %1.3f \n'%(self.bests.sigs[iCat], self.bests.bkgs[iCat], self.bests.signifs[iCat])
+      printStr += 'With  S %1.3f,  B %1.3f + %1.3f,  signif = %1.3f \n'%(self.bests.sigs[iCat], self.bests.bkgs[iCat], self.bests.nons[iCat], self.bests.signifs[iCat])
     printStr += 'Corresponding to a total significance of  %1.3f \n\n'%self.bests.totSignif
     return printStr
 

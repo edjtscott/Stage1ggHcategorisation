@@ -8,19 +8,19 @@ myDir = getcwd()
 baseDir = '/vols/cms/es811/Stage1categorisation'
 #years = ['2016','2017']
 
-years = ['2016']
-intLumi = 35.9
+#years = ['2016']
+#intLumi = 35.9
 
-#years = ['2017']
-#intLumi = 41.5
+years = ['2017']
+intLumi = 41.5
 
-#script    = 'diphotonCategorisation.py'
-#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
-#models    = None
-#classModel = None
-##dataFrame = 'trainTotal.pkl'
-#dataFrame = None
-#sigFrame  = None
+script    = 'diphotonCategorisation.py'
+paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+models    = None
+classModel = None
+#dataFrame = 'trainTotal.pkl'
+dataFrame = None
+sigFrame  = None
 
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']
@@ -30,39 +30,11 @@ intLumi = 35.9
 #dataFrame = None
 #sigFrame  = None
 
-script    = 'dataSignificances.py'
-models    = ['altDiphoModel.model','diphoModel.model']
-#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
-paramSets = [None]
-classModel = 'jetModel.model'
-for params in paramSets:
-  if not params: continue
-  params = params.split(',')
-  name = 'diphoModel'
-  for param in params:
-    var = param.split(':')[0]
-    val = param.split(':')[1]
-    name += '__%s_%s'%(var,str(val))
-  name += '.model'
-  models.append(name)
-  models.append(name.replace('dipho','altDipho'))
-paramSets = None
-#dataFrame = 'dataTotal.pkl'
-dataFrame = None
-#sigFrame  = 'signifTotal.pkl'
-sigFrame  = None
-
-#script    = 'dataMCcheckSidebands.py'
+#script    = 'dataSignificances.py'
 #models    = ['altDiphoModel.model','diphoModel.model']
-#classModel = None
-#paramSets = None
-#dataFrame = 'dataTotal.pkl'
-#sigFrame  = 'trainTotal.pkl'
-
-#script    = 'dataSignificancesVBF.py'
-#models    = [None,'altDiphoModel.model','diphoModel.model']
-#classModel = None
-#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#paramSets = [None]
+#classModel = 'jetModel.model'
 #for params in paramSets:
 #  if not params: continue
 #  params = params.split(',')
@@ -75,10 +47,40 @@ sigFrame  = None
 #  models.append(name)
 #  models.append(name.replace('dipho','altDipho'))
 #paramSets = None
-##dataFrame = None
+##dataFrame = 'dataTotal.pkl'
+#dataFrame = None
+##sigFrame  = 'signifTotal.pkl'
+#sigFrame  = None
+
+#script    = 'dataMCcheckSidebands.py'
+#models    = ['altDiphoModel.model','diphoModel.model']
+#classModel = None
+#paramSets = None
 #dataFrame = 'dataTotal.pkl'
-##sigFrame  = None
-#sigFrame  = 'vbfTotal.pkl'
+#sigFrame  = 'trainTotal.pkl'
+
+#script    = 'dataSignificancesVBF.py'
+##models    = [None,'altDiphoModel.model','diphoModel.model']
+#models    = ['altDiphoModel.model','diphoModel.model']
+#classModel = None
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#paramSets = [None]
+#for params in paramSets:
+#  if not params: continue
+#  params = params.split(',')
+#  name = 'diphoModel'
+#  for param in params:
+#    var = param.split(':')[0]
+#    val = param.split(':')[1]
+#    name += '__%s_%s'%(var,str(val))
+#  name += '.model'
+#  models.append(name)
+#  models.append(name.replace('dipho','altDipho'))
+#paramSets = None
+#dataFrame = None
+##dataFrame = 'dataTotal.pkl'
+#sigFrame  = None
+##sigFrame  = 'vbfTotal.pkl'
 
 #script    = 'combinedBDT.py'
 #paramSets = None
