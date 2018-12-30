@@ -34,7 +34,8 @@ sigFrame  = None
 #models    = ['altDiphoModel.model','diphoModel.model']
 ##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
 #paramSets = [None]
-#classModel = 'jetModel.model'
+#classModel = None
+##classModel = 'jetModel.model'
 #for params in paramSets:
 #  if not params: continue
 #  params = params.split(',')
