@@ -3,6 +3,7 @@ import numpy as np
 import ROOT as r
 r.gROOT.SetBatch(True)
 from root_numpy import fill_hist
+import usefulStyle as useSty
 
 
 class Bests:
@@ -164,6 +165,64 @@ class CatOptim:
         for name in self.names:
           self.boundaries[name] = cuts[name]
 
+  def crossCheck(self, lumi, plotDir):
+    '''Run a check to ensure the random search found a good mimimum'''
+    for iName,name in enumerate(self.names):
+      for iCat in range(self.nCats):
+        best = self.boundaries[name][iCat]
+        rnge = 0.2 * self.highs[name] - self.lows[name]
+        graph = r.TGraph()
+        for iVal,val in enumerate(np.arange(best-rnge/2., best+rnge/2., rnge/10.)):
+          sigs = []
+          bkgs = []
+          nons = []
+          cuts = {} 
+          cuts[name] = self.boundaries[name]
+          cuts[name][iCat] = val
+          bests = Bests(self.nCats)
+          for jCat in range(self.nCats):
+            lastCat = (jCat+1 == self.nCats)
+            sigWeights = self.sigWeights
+            bkgWeights = self.bkgWeights
+            if self.addNonSig: nonSigWeights = self.nonSigWeights
+            for jName,jname in enumerate(self.names):
+              sigWeights = sigWeights * (self.sigDiscrims[jname]>cuts[jname][jCat])
+              bkgWeights = bkgWeights * (self.bkgDiscrims[jname]>cuts[jname][jCat])
+              if self.addNonSig: nonSigWeights = nonSigWeights * (self.nonSigDiscrims[jname]>cuts[jname][jCat])
+              if not lastCat:
+                if jName==0 or self.sortOthers:
+                  sigWeights = sigWeights * (self.sigDiscrims[jname]<cuts[jname][jCat+1])
+                  bkgWeights = bkgWeights * (self.bkgDiscrims[jname]<cuts[jname][jCat+1])
+                  if self.addNonSig: nonSigWeights = nonSigWeights * (self.nonSigDiscrims[jname]<cuts[jname][jCat+1])
+            sigHist = r.TH1F('sigHistTemp','sigHistTemp',160,100,180)
+            fill_hist(sigHist, self.sigMass, weights=sigWeights)
+            sigCount = 0.68 * lumi * sigHist.Integral() 
+            sigWidth = self.getRealSigma(sigHist)
+            bkgHist = r.TH1F('bkgHistTemp','bkgHistTemp',160,100,180)
+            fill_hist(bkgHist, self.bkgMass, weights=bkgWeights)
+            bkgCount = self.computeBkg(bkgHist, sigWidth)
+            if self.addNonSig:
+              nonSigHist = r.TH1F('nonSigHistTemp','nonSigHistTemp',160,100,180)
+              fill_hist(nonSigHist, self.nonSigMass, weights=nonSigWeights)
+              nonSigCount = 0.68 * lumi * nonSigHist.Integral() 
+            else:
+              nonSigCount = 0.
+            sigs.append(sigCount)
+            bkgs.append(bkgCount)
+            nons.append(nonSigCount)
+          bests.update(sigs, bkgs, nons)
+          graph.SetPoint(iVal, val-best, bests.getTotSignif())
+        canv = useSty.setCanvas()
+        graphName = 'CrossCheck_%s_Cat%g'%(name, iCat)
+        graph.SetTitle(graphName.replace('_',' '))
+        graph.GetXaxis().SetTitle('Cut value - chosen value')
+        graph.GetYaxis().SetTitle('Significance (#sigma)')
+        graph.Draw()
+        useSty.drawCMS(text='Internal')
+        useSty.drawEnPu(lumi=lumi)
+        canv.Print('%s/%s.pdf'%(plotDir,graphName))
+        canv.Print('%s/%s.png'%(plotDir,graphName))
+
   def setSortOthers(self, val):
     self.sortOthers = val
 
@@ -198,3 +257,13 @@ class CatOptim:
       fit = hist.GetFunction('expo')
       bkgVal = fit.Integral(125. - effSigma, 125. + effSigma)
     return bkgVal
+
+  def getAMS(self, s, b, breg=3.):
+    b = b + breg
+    val = 0.
+    if b > 0.:
+      val = (s + b)*np.log(1. + (s/b))
+      val = 2*(val - s)
+      val = np.sqrt(val)
+    return val
+

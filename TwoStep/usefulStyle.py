@@ -124,8 +124,7 @@ def formatRatio(h):
     h.GetYaxis().SetNdivisions(505)
     h.GetYaxis().SetRangeUser(0.4, 1.6)
 
-def drawCMS(onTop=False):
-    text='Simulation'
+def drawCMS(onTop=False, text='Simulation'):
     latex = TLatex()
     latex.SetNDC()
     latex.SetTextFont(62)

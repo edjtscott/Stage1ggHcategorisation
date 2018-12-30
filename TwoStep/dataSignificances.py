@@ -11,7 +11,6 @@ from os import path, system
 from addRowFunctions import addPt, truthDipho, reco, diphoWeight, altDiphoWeight, truthClass
 from otherHelpers import prettyHist, getAMS, computeBkg, getRealSigma, jetPtToClass
 from root_numpy import tree2array, fill_hist
-import usefulStyle as useSty
 from catOptim import CatOptim
 
 #configure options
@@ -32,6 +31,8 @@ if trainDir.endswith('/'): trainDir = trainDir[:-1]
 frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
 plotDir  = trainDir.replace('trees','plots')
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
 nJetClasses = 3
 nClasses = 9
 jetPriors = [0.606560, 0.270464, 0.122976]
@@ -123,8 +124,8 @@ else:
 
 if not opts.signifFrame:
   #read in signal mc dataframe
-  #trainTotal = pd.read_pickle('%s/trainTotal.pkl'%frameDir)
-  trainTotal = pd.read_pickle('%s/jetTotal.pkl'%frameDir)
+  trainTotal = pd.read_pickle('%s/trainTotal.pkl'%frameDir)
+  #trainTotal = pd.read_pickle('%s/jetTotal.pkl'%frameDir)
   print 'Successfully loaded the signal dataframe'
   
   #remove bkg then add reco tag info
@@ -152,7 +153,7 @@ else:
 #define the variables used as input to the classifier
 diphoX  = trainTotal[diphoVars].values
 diphoY  = trainTotal['truthDipho'].values
-diphoI  = trainTotal[jetVars].values
+#diphoI  = trainTotal[jetVars].values
 diphoJ  = trainTotal['truthClass'].values
 diphoFW = trainTotal['weight'].values
 diphoS  = trainTotal['stage1cat'].values
@@ -161,7 +162,7 @@ diphoR  = trainTotal['reco'].values
 diphoM  = trainTotal['CMS_hgg_mass'].values
 
 dataX  = dataTotal[diphoVars].values
-dataI  = dataTotal[jetVars].values
+#dataI  = dataTotal[jetVars].values
 dataY  = np.zeros(dataX.shape[0])
 dataFW = np.ones(dataX.shape[0])
 dataP  = dataTotal['diphopt'].values
@@ -206,11 +207,19 @@ ranges = [ [0.5,1.] ]
 names  = ['DiphotonBDT']
 printStr = ''
 
+plotDir  = '%s/%s/Proc_0'%(plotDir,opts.modelName.replace('.model',''))
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
+
 for iClass in range(nClasses):
   sigWeights = diphoFW * (diphoJ==iClass) * (diphoR==iClass)
   bkgWeights = dataFW * (dataR==iClass)
   optimiser = CatOptim(sigWeights, diphoM, [diphoPredY], bkgWeights, dataM, [dataPredY], 2, ranges, names)
   optimiser.optimise(opts.intLumi, opts.nIterations)
+  plotDir  = plotDir.replace('Proc_%g'%(iClass-1),'Proc_%g'%iClass)
+  if not path.isdir(plotDir): 
+    system('mkdir -p %s'%plotDir)
+  optimiser.crossCheck(opts.intLumi,plotDir)
   printStr += 'Results for bin %g : \n'%iClass
   printStr += optimiser.getPrintableResult()
 
