@@ -26,6 +26,8 @@ class Bests:
       bkg = bkgs[i] 
       non = nons[i] 
       signif = self.getAMS(sig, bkg+non)
+      #signif = self.getAMS(sig, bkg+(2.*non)) #FIXME trying to give stronger penalty to ggH term
+      #signif = self.getAMS(sig, bkg+(non*non)) #FIXME trying to give stronger penalty to ggH term
       signifs.append(signif)
       totSignifSq += signif*signif
     totSignif = np.sqrt( totSignifSq )
@@ -93,6 +95,7 @@ class CatOptim:
     self.bests         = Bests(self.nCats)
     self.sortOthers    = False
     self.addNonSig     = False
+    self.transform     = False
     assert len(bkgDiscrims) == len(sigDiscrims)
     assert len(ranges)      == len(sigDiscrims)
     assert len(names)       == len(sigDiscrims)
@@ -119,6 +122,13 @@ class CatOptim:
     for iName,name in enumerate(self.names):
       self.nonSigDiscrims[ name ] = nonSigDiscrims[iName]
 
+  def setTransform( self, val ):
+    self.transform = val
+
+  def doTransform( self, arr ):
+    arr = 1. / ( 1. + np.exp( 0.5*np.log( 2./(arr+1.) - 1. ) ) )
+    return arr
+
   def optimise(self, lumi, nIters):
     '''Run the optimisation for a given number of iterations'''
     for iIter in range(nIters):
@@ -128,6 +138,8 @@ class CatOptim:
         if iName==0 or self.sortOthers:
           tempCuts.sort()
         cuts[name] = tempCuts
+        if self.transform:
+          tempCuts = self.doTransform(tempCuts)
       sigs = []
       bkgs = []
       nons = []
@@ -252,7 +264,8 @@ class CatOptim:
   
   def computeBkg( self, hist, effSigma ):
     bkgVal = 9999.
-    if hist.GetEntries() > 0 and hist.Integral()>0.000001:
+    #if hist.GetEntries() > 0 and hist.Integral()>0.000001:
+    if hist.GetEffectiveEntries() > 10 and hist.Integral()>0.000001:
       hist.Fit('expo')
       fit = hist.GetFunction('expo')
       bkgVal = fit.Integral(125. - effSigma, 125. + effSigma)

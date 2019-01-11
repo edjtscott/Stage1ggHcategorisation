@@ -30,7 +30,7 @@ def reco(row):
 
 def diphoWeight(row, sigWeight=1.):
     weight = row['weight']
-    if row['proc'] == 'qcd': 
+    if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
     elif row['stage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
@@ -42,7 +42,7 @@ def diphoWeight(row, sigWeight=1.):
 
 def combinedWeight(row):
     weight = row['weight']
-    if row['proc'] == 'qcd': 
+    if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
     weight = abs(weight)
     return weight
@@ -50,7 +50,7 @@ def combinedWeight(row):
 def normWeight(row, bkgWeight=100., zerojWeight=1.):
     weightFactors = [0.0002994, 0.0000757, 0.0000530, 0.0000099, 0.0000029, 0.0000154, 0.0000235, 0.0000165, 0.0000104] #FIXME update these
     weight = row['weight']
-    if row['proc'] == 'qcd': 
+    if row['proc'].count('qcd'): 
         weight *= 0.04 / weightFactors[ int(row['truthClass']) ] #reduce because too large by default
     else: 
         weight *= 1. / weightFactors[ int(row['truthClass']) ] #otherwise just reweight by xs
@@ -69,9 +69,10 @@ def jetWeight(row):
     weight = abs(weight)
     return weight
 
-def altDiphoWeight(row, sigWeight=1./0.001169):
+#def altDiphoWeight(row, sigWeight=1./0.001169):
+def altDiphoWeight(row, sigWeight=1./0.001297):
     weight = row['weight']
-    if row['proc'] == 'qcd':
+    if row['proc'].count('qcd'):
         weight *= 0.04 #downweight bc too few events
     elif row['stage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised

@@ -3,6 +3,8 @@ import ROOT as r
 import numpy as np
 import pandas as pd
 import xgboost as xg
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
@@ -21,7 +23,7 @@ parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if i
 parser.add_option('-s','--signifFrame', default=None, help='Name of cleaned signal dataframe if it already exists')
 parser.add_option('-m','--modelName', default=None, help='Name of model for testing')
 parser.add_option('-c','--className', default=None, help='Name of multi-class model used to build categories. If None, use reco categories')
-parser.add_option('-n','--nIterations', default=1000, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=2000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -107,7 +109,7 @@ if not opts.dataFrame:
   #add extra info to dataframe
   print 'about to add extra columns'
   dataTotal['diphopt'] = dataTotal.apply(addPt, axis=1)
-  dataTotal['reco'] = dataTotal.apply(reco,axis=1)
+  dataTotal['reco'] = dataTotal.apply(reco, axis=1)
   print 'all columns added'
 
   #save as a pickle file
@@ -215,11 +217,22 @@ for iClass in range(nClasses):
   sigWeights = diphoFW * (diphoJ==iClass) * (diphoR==iClass)
   bkgWeights = dataFW * (dataR==iClass)
   optimiser = CatOptim(sigWeights, diphoM, [diphoPredY], bkgWeights, dataM, [dataPredY], 2, ranges, names)
+  #optimiser.setTransform(True) #FIXME
   optimiser.optimise(opts.intLumi, opts.nIterations)
   plotDir  = plotDir.replace('Proc_%g'%(iClass-1),'Proc_%g'%iClass)
   if not path.isdir(plotDir): 
     system('mkdir -p %s'%plotDir)
   optimiser.crossCheck(opts.intLumi,plotDir)
+  printStr += 'Results for bin %g : \n'%iClass
+  printStr += optimiser.getPrintableResult()
+
+binsRequiringThree = [0]
+for iClass in binsRequiringThree:
+  sigWeights = diphoFW * (diphoJ==iClass) * (diphoR==iClass)
+  bkgWeights = dataFW * (dataR==iClass)
+  optimiser = CatOptim(sigWeights, diphoM, [diphoPredY], bkgWeights, dataM, [dataPredY], 3, ranges, names)
+  #optimiser.setTransform(True) #FIXME
+  optimiser.optimise(opts.intLumi, opts.nIterations)
   printStr += 'Results for bin %g : \n'%iClass
   printStr += optimiser.getPrintableResult()
 

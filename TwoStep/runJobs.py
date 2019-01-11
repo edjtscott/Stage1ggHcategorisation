@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from os import system, path, getcwd
 from otherHelpers import submitJob
 
@@ -5,16 +6,17 @@ dryRun = False
 #dryRun = True
 
 myDir = getcwd()
-baseDir = '/vols/cms/es811/Stage1categorisation'
+baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
 #years = ['2016','2017']
 
-#years = ['2016']
-#intLumi = 35.9
+years = ['2016']
+intLumi = 35.9
 
-years = ['2017']
-intLumi = 41.5
+#years = ['2017']
+#intLumi = 41.3
 
 script    = 'diphotonCategorisation.py'
+#paramSets = [None]
 paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
 models    = None
 classModel = None
@@ -48,10 +50,10 @@ sigFrame  = None
 #  models.append(name)
 #  models.append(name.replace('dipho','altDipho'))
 #paramSets = None
-##dataFrame = 'dataTotal.pkl'
-#dataFrame = None
-##sigFrame  = 'signifTotal.pkl'
-#sigFrame  = None
+#dataFrame = 'dataTotal.pkl'
+##dataFrame = None
+#sigFrame  = 'signifTotal.pkl'
+##sigFrame  = None
 
 #script    = 'dataMCcheckSidebands.py'
 #models    = ['altDiphoModel.model','diphoModel.model']
@@ -105,7 +107,7 @@ if __name__=='__main__':
     jobDir = '%s/Jobs/%s/%s' % (myDir, script.replace('.py',''), year)
     if not path.isdir( jobDir ): system('mkdir -p %s'%jobDir)
     trainDir  = '%s/%s/trees'%(baseDir,year)
-    if 'VBF' in script: trainDir  = '%s/%s/ForVBF/trees'%(baseDir,year) #FIXME
+    #if 'VBF' in script: trainDir  = '%s/%s/ForVBF/trees'%(baseDir,year) #FIXME
     theCmd = 'python %s -t %s '%(script, trainDir)
     if dataFrame: 
       theCmd += '-d %s '%dataFrame

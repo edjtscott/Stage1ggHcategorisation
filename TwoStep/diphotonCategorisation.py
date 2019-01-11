@@ -3,6 +3,8 @@ import ROOT as r
 import numpy as np
 import pandas as pd
 import xgboost as xg
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
@@ -32,7 +34,9 @@ trainFrac = 0.7
 validFrac = 0.1
 
 #get trees from files, put them in data frames
-procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'tth':'ttH.root', 'wzh':'VH.root', 'dipho':'Dipho.root', 'gjet':'GJet.root', 'qcd':'QCD.root'}
+#procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'tth':'ttH.root', 'wzh':'VH.root', 'dipho':'Dipho.root', 'gjet':'GJet.root', 'qcd':'QCD.root'}
+procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'tth':'powheg_ttH.root', 
+               'dipho':'Dipho.root', 'gjet_promptfake':'GJet_pf.root', 'gjet_fakefake':'GJet_ff.root', 'qcd_promptfake':'QCD_pf.root', 'qcd_fakefake':'QCD_ff.root'}
 theProcs = procFileMap.keys()
 
 #define the different sets of variables used
@@ -106,7 +110,7 @@ if not opts.dataFrame:
 
 #read in dataframe if above steps done before
 else:
-  trainTotal = pd.read_pickle(opts.dataFrame)
+  trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
   print 'Successfully loaded the dataframe'
 
 sigSumW = np.sum( trainTotal[trainTotal.stage1cat>0.01]['weight'].values )
@@ -114,6 +118,7 @@ bkgSumW = np.sum( trainTotal[trainTotal.stage1cat==0]['weight'].values )
 print 'sigSumW %.6f'%sigSumW
 print 'bkgSumW %.6f'%bkgSumW
 print 'ratio %.6f'%(sigSumW/bkgSumW)
+#exit('first just count the weights')
 
 #define the indices shuffle (useful to keep this separate so it can be re-used)
 theShape = trainTotal.shape[0]
@@ -193,9 +198,11 @@ print 'Alternative training performance:'
 print 'area under roc curve for training set = %1.3f'%( roc_auc_score(diphoTrainY, altDiphoPredYxcheck, sample_weight=diphoTrainFW) )
 print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(diphoTestY, altDiphoPredY, sample_weight=diphoTestFW) )
 
-exit("Plotting not working for now so exit")
+#exit("Plotting not working for now so exit")
 #make some plots 
 plotDir = trainDir.replace('trees','plots')
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
 bkgEff, sigEff, nada = roc_curve(diphoTestY, diphoPredY, sample_weight=diphoTestFW)
 plt.figure(1)
 plt.plot(bkgEff, sigEff)

@@ -38,7 +38,7 @@ diphoVars  = ['leadmva','subleadmva','leadptom','subleadptom',
 
 #get trees from files, put them in data frames
 #procFileMap = {'vbf':'VBF.root'}
-procFileMap = {'ggh':'ggH.root','vbf':'VBF.root'}
+procFileMap = {'ggh':'powheg_ggH.root','vbf':'powheg_VBF.root'}
 theProcs = procFileMap.keys()
 dataFileMap = {'Data':'Data.root'}
 
@@ -172,12 +172,14 @@ diphoP  = trainTotal['stage1cat'].values
 diphoV  = trainTotal['VBFMVAValue'].values
 diphoH  = trainTotal['ptHjj'].values
 diphoJ  = trainTotal['dijet_Mjj'].values
+diphoL  = trainTotal['dijet_LeadJPt'].values
 
 dataM  = dataTotal['CMS_hgg_mass'].values
 dataFW = np.ones(dataM.shape[0])
 dataV  = dataTotal['VBFMVAValue'].values
 dataH  = dataTotal['ptHjj'].values
 dataJ  = dataTotal['dijet_Mjj'].values
+dataL  = dataTotal['dijet_LeadJPt'].values
 
 # either use what is already packaged up or perform inference
 if not opts.modelName:
@@ -200,94 +202,67 @@ ranges = [ [-0.9,1.], [0.5,1.] ]
 names  = ['DijetBDT','DiphotonBDT']
 printStr = ''
 
-#first the low ptHjj bin
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH<ptHjjCut)
-bkgWeights = dataFW * (dataH<ptHjjCut)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for low ptHjj bin are: \n'
-printStr += optimiser.getPrintableResult()
-
-#first the low ptHjj bin
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH<ptHjjCut)
-bkgWeights = dataFW * (dataH<ptHjjCut)
-nonSigWeights = diphoFW * (diphoP<12) * (diphoP>2) * (diphoH<ptHjjCut)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
-optimiser.setNonSig(nonSigWeights, diphoM, [diphoV,diphoD])
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for low ptHjj bin are: \n'
-printStr += optimiser.getPrintableResult()
-
-#and now the high bin
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH>ptHjjCut)
-bkgWeights = dataFW * (dataH>ptHjjCut)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for high ptHjj bin are: \n'
-printStr += optimiser.getPrintableResult()
-
-#repeat with no ptHjj cut
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17)
-bkgWeights = dataFW
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results with no ptHjj cut are: \n'
-printStr += optimiser.getPrintableResult()
-
-#repeat with no ptHjj cut, three-cat version
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17)
-bkgWeights = dataFW
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 3, ranges, names)
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results with no ptHjj cut are: \n'
-printStr += optimiser.getPrintableResult()
+plotDir = trainDir.replace('trees','plots')
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
+plotDir = '%s/%s/Proc_ptHjjLow'%(plotDir,opts.modelName.replace('.model',''))
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
 
 #all three again with mjj cut increased to 400
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH<ptHjjCut) * (diphoJ>400)
-bkgWeights = dataFW * (dataH<ptHjjCut) * (dataJ>400)
+sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH<ptHjjCut) * (diphoJ>400) * (diphoL<200)
+bkgWeights = dataFW * (dataH<ptHjjCut) * (dataJ>400) * (dataL<200)
+nonWeights = diphoFW * (diphoP<12) * (diphoP>0) * (diphoH<ptHjjCut) * (diphoJ>400) * (diphoL<200)
 optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, diphoM, [diphoV,diphoD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
+#optimiser.crossCheck(opts.intLumi,plotDir)
 printStr += 'Results for low ptHjj bin with mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
 
+plotDir  = '%s/%s/Proc_ptHjjHigh'%(plotDir,opts.modelName.replace('.model',''))
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
+
 #and now the high bin
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH>ptHjjCut) * (diphoJ>400)
-bkgWeights = dataFW * (dataH>ptHjjCut) * (dataJ>400)
+sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoH>ptHjjCut) * (diphoJ>400) * (diphoL<200)
+bkgWeights = dataFW * (dataH>ptHjjCut) * (dataJ>400) * (dataL<200)
+nonWeights = diphoFW * (diphoP<12) * (diphoP>0) * (diphoH>ptHjjCut) * (diphoJ>400) * (diphoL<200)
 optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, diphoM, [diphoV,diphoD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
+#optimiser.crossCheck(opts.intLumi,plotDir)
 printStr += 'Results for high ptHjj bin with mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
 
-#no ptHjj cut and mjj > 400
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>400)
-bkgWeights = dataFW * (dataJ>400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results with no ptHjj cut and mjj over 400 are: \n'
-printStr += optimiser.getPrintableResult()
-
-#no ptHjj cut and mjj > 400
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>400)
-bkgWeights = dataFW * (dataJ>400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 3, ranges, names)
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results with no ptHjj cut and mjj over 400 are: \n'
-printStr += optimiser.getPrintableResult()
+plotDir  = '%s/%s/Proc_VBFRest'%(plotDir,opts.modelName.replace('.model',''))
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
 
 # test a version targeting "VBF rest" bin - one cat only
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>250) * (diphoJ<400)
-bkgWeights = dataFW * (dataJ>250) * (dataJ<400)
+sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>250) * (diphoJ<400) * (diphoL<200)
+bkgWeights = dataFW * (dataJ>250) * (dataJ<400) * (dataL<200)
+nonWeights = diphoFW * (diphoP<12) * (diphoJ>250) * (diphoJ<400) * (diphoL<200)
 optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, diphoM, [diphoV,diphoD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
+#optimiser.crossCheck(opts.intLumi,plotDir)
 printStr += 'Results for the VBF rest bin are: \n'
 printStr += optimiser.getPrintableResult()
 
-# test a version targeting "VBF rest" bin - two cats
-sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>250) * (diphoJ<400)
-bkgWeights = dataFW * (dataJ>250) * (dataJ<400)
-optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
+plotDir  = '%s/%s/Proc_VBFBSM'%(plotDir,opts.modelName.replace('.model',''))
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
+
+# BSM category
+sigWeights = diphoFW * (diphoP>11) * (diphoP<17) * (diphoJ>250) * (diphoL>200)
+bkgWeights = dataFW * (dataJ>250) * (dataL>200)
+nonWeights = diphoFW * (diphoP<12) * (diphoJ>250) * (diphoL>200)
+optimiser = CatOptim(sigWeights, diphoM, [diphoV,diphoD], bkgWeights, dataM, [dataV,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, diphoM, [diphoV,diphoD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for the VBF rest bin are: \n'
+#optimiser.crossCheck(opts.intLumi,plotDir)
+printStr += 'Results for the VBF BSM bin are: \n'
 printStr += optimiser.getPrintableResult()
 
 print
