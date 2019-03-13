@@ -125,6 +125,55 @@ else:
 
 
 if not opts.signifFrame:
+  #sigFileMap = {'ggh':'ggH.root'}
+  #trainFrames = {}
+  ##get the trees, turn them into arrays
+  #for proc,fn in sigFileMap.iteritems():
+  #    trainFile   = r.TFile('%s/%s'%(trainDir,fn))
+  #    if proc[-1].count('h') or 'vbf' in proc: trainTree = trainFile.Get('vbfTagDumper/trees/%s_125_13TeV_VBFDiJet'%proc)
+  #    else: trainTree = trainFile.Get('vbfTagDumper/trees/%s_13TeV_VBFDiJet'%proc)
+  #    trainTree.SetBranchStatus('nvtx',0)
+  #    trainTree.SetBranchStatus('VBFMVAValue',0)
+  #    trainTree.SetBranchStatus('dijet_*',0)
+  #    trainTree.SetBranchStatus('dZ',0)
+  #    trainTree.SetBranchStatus('centralObjectWeight',0)
+  #    trainTree.SetBranchStatus('rho',0)
+  #    trainTree.SetBranchStatus('nvtx',0)
+  #    trainTree.SetBranchStatus('event',0)
+  #    trainTree.SetBranchStatus('lumi',0)
+  #    trainTree.SetBranchStatus('processIndex',0)
+  #    trainTree.SetBranchStatus('run',0)
+  #    trainTree.SetBranchStatus('npu',0)
+  #    trainTree.SetBranchStatus('puweight',0)
+  #    newFile = r.TFile('/vols/cms/es811/Stage1categorisation/trainTrees/new.root','RECREATE')
+  #    newTree = trainTree.CloneTree()
+  #    trainFrames[proc] = pd.DataFrame( tree2array(newTree) )
+  #    del newTree
+  #    del newFile
+  #    trainFrames[proc]['proc'] = proc
+  #print 'got trees'
+  #
+  ##create one total frame
+  #trainList = []
+  #for proc,fn in sigFileMap.iteritems():
+  #    trainList.append(trainFrames[proc])
+  #trainTotal = pd.concat(trainList)
+  #del trainFrames
+  #print 'created total frame'
+  #
+  ##then filter out the events into only those with the phase space we are interested in
+  #trainTotal = trainTotal[trainTotal.CMS_hgg_mass>100.]
+  #trainTotal = trainTotal[trainTotal.CMS_hgg_mass<180.]
+  #print 'done mass cuts'
+  #
+  ##some extra cuts that are applied for diphoton BDT in the AN
+  #trainTotal = trainTotal[trainTotal.leadmva>-0.9]
+  #trainTotal = trainTotal[trainTotal.subleadmva>-0.9]
+  #trainTotal = trainTotal[trainTotal.leadptom>0.333]
+  #trainTotal = trainTotal[trainTotal.subleadptom>0.25]
+  #trainTotal = trainTotal[trainTotal.stage1cat>-1.]
+
+  #FIXME below is temporarily replaced
   #read in signal mc dataframe
   trainTotal = pd.read_pickle('%s/trainTotal.pkl'%frameDir)
   #trainTotal = pd.read_pickle('%s/jetTotal.pkl'%frameDir)
@@ -222,7 +271,7 @@ for iClass in range(nClasses):
   plotDir  = plotDir.replace('Proc_%g'%(iClass-1),'Proc_%g'%iClass)
   if not path.isdir(plotDir): 
     system('mkdir -p %s'%plotDir)
-  optimiser.crossCheck(opts.intLumi,plotDir)
+  #optimiser.crossCheck(opts.intLumi,plotDir)
   printStr += 'Results for bin %g : \n'%iClass
   printStr += optimiser.getPrintableResult()
 

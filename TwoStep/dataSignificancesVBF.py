@@ -87,9 +87,7 @@ if not opts.signalFrame:
   trainTotal = trainTotal[trainTotal.CMS_hgg_mass<180.]
   print 'done mass cuts'
   
-  #some extra cuts that are applied for diphoton BDT in the AN
-  #trainTotal = trainTotal[trainTotal.leadmva>-0.9]
-  #trainTotal = trainTotal[trainTotal.subleadmva>-0.9] #FIXME try changing these as in paper
+  #apply the full VBF preselection
   trainTotal = trainTotal[trainTotal.leadmva>-0.2]
   trainTotal = trainTotal[trainTotal.subleadmva>-0.2]
   trainTotal = trainTotal[trainTotal.leadptom>0.333]
@@ -145,9 +143,7 @@ if not opts.dataFrame:
   dataTotal = dataTotal[dataTotal.CMS_hgg_mass<180.]
   print 'done mass cuts'
   
-  #some extra cuts that are applied for diphoton BDT in the AN
-  #dataTotal = dataTotal[dataTotal.leadmva>-0.9]
-  #dataTotal = dataTotal[dataTotal.subleadmva>-0.9] #FIXME
+  #apply the full VBF preselection
   dataTotal = dataTotal[dataTotal.leadmva>-0.2]
   dataTotal = dataTotal[dataTotal.subleadmva>-0.2]
   dataTotal = dataTotal[dataTotal.leadptom>0.333]
@@ -220,6 +216,7 @@ optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for low ptHjj bin with mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
 
+plotDir = trainDir.replace('trees','plots')
 plotDir  = '%s/%s/Proc_ptHjjHigh'%(plotDir,opts.modelName.replace('.model',''))
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)
@@ -235,6 +232,7 @@ optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for high ptHjj bin with mjj over 400 are: \n'
 printStr += optimiser.getPrintableResult()
 
+plotDir = trainDir.replace('trees','plots')
 plotDir  = '%s/%s/Proc_VBFRest'%(plotDir,opts.modelName.replace('.model',''))
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)
@@ -250,6 +248,7 @@ optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for the VBF rest bin are: \n'
 printStr += optimiser.getPrintableResult()
 
+plotDir = trainDir.replace('trees','plots')
 plotDir  = '%s/%s/Proc_VBFBSM'%(plotDir,opts.modelName.replace('.model',''))
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)

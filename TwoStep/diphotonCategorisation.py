@@ -201,6 +201,7 @@ print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(diphoTestY
 #exit("Plotting not working for now so exit")
 #make some plots 
 plotDir = trainDir.replace('trees','plots')
+plotDir = '%s/%s'%paramExt
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)
 bkgEff, sigEff, nada = roc_curve(diphoTestY, diphoPredY, sample_weight=diphoTestFW)
@@ -242,6 +243,16 @@ bkgScoreHist.SetTitle('')
 bkgScoreHist.GetXaxis().SetTitle('Diphoton BDT score')
 fill_hist(bkgScoreHist, diphoPredY, weights=bkgScoreW)
 
+sigScoreHist.SetLineColor(r.kBlue)
+sigScoreHist.Draw('hist')
+useSty.drawCMS()
+useSty.drawEnPu(lumi='35.9 fb^{-1}')
+theCanv.SaveAs('%s/sigScore.pdf'%plotDir)
+bkgScoreHist.SetLineColor(r.kRed)
+bkgScoreHist.Draw('hist')
+useSty.drawCMS()
+useSty.drawEnPu(lumi='35.9 fb^{-1}')
+theCanv.SaveAs('%s/bkgScore.pdf'%plotDir)
 
 #apply transformation to flatten ggH
 for iBin in range(1,nOutputBins+1):
@@ -277,6 +288,17 @@ useSty.formatHisto(bkgScoreHist)
 bkgScoreHist.SetTitle('')
 bkgScoreHist.GetXaxis().SetTitle('Diphoton BDT score')
 fill_hist(bkgScoreHist, altDiphoPredY, weights=bkgScoreW)
+
+sigScoreHist.SetLineColor(r.kBlue)
+sigScoreHist.Draw('hist')
+useSty.drawCMS()
+useSty.drawEnPu(lumi='35.9 fb^{-1}')
+theCanv.SaveAs('%s/altSigScore.pdf'%plotDir)
+bkgScoreHist.SetLineColor(r.kRed)
+bkgScoreHist.Draw('hist')
+useSty.drawCMS()
+useSty.drawEnPu(lumi='35.9 fb^{-1}')
+theCanv.SaveAs('%s/altBkgScore.pdf'%plotDir)
 
 for iBin in range(1,nOutputBins+1):
     sigVal = sigScoreHist.GetBinContent(iBin)

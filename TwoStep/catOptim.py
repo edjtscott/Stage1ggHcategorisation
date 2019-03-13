@@ -138,8 +138,8 @@ class CatOptim:
         if iName==0 or self.sortOthers:
           tempCuts.sort()
         cuts[name] = tempCuts
-        if self.transform:
-          tempCuts = self.doTransform(tempCuts)
+        #if self.transform:
+        #  tempCuts = self.doTransform(tempCuts)
       sigs = []
       bkgs = []
       nons = []
