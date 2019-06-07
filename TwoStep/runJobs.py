@@ -2,26 +2,39 @@
 from os import system, path, getcwd
 from otherHelpers import submitJob
 
-dryRun = False
-#dryRun = True
+#dryRun = False
+dryRun = True
+
+#runLocal = False
+runLocal = True
 
 myDir = getcwd()
-baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
+#baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
+baseDir = '/vols/cms/es811/Stage1categorisation/VHstudies'
 #years = ['2016','2017']
 
-years = ['2016']
-intLumi = 35.9
+#years = ['2016']
+#intLumi = 35.9
 
-#years = ['2017']
-#intLumi = 41.5
+years = ['2017']
+intLumi = 41.5
 
-script    = 'diphotonCategorisation.py'
-#paramSets = [None]
-paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#script    = 'diphotonCategorisation.py'
+##paramSets = [None]
+#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'trainTotal.pkl'
+#dataFrame = None
+#sigFrame  = None
+
+script    = 'vhHadCategorisation.py'
+paramSets = [None]
+#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
 models    = None
 classModel = None
-#dataFrame = 'trainTotal.pkl'
-dataFrame = None
+dataFrame = 'vhHadTotal.pkl'
+#dataFrame = None
 sigFrame  = None
 
 #script    = 'nJetCategorisation.py'
@@ -122,9 +135,17 @@ if __name__=='__main__':
       for params in paramSets:
         fullCmd = theCmd 
         if params: fullCmd += '--trainParams %s '%params
-        submitJob( jobDir, fullCmd, params=params, dryRun=dryRun )
+        if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        elif dryRun: print fullCmd
+        else:
+          print fullCmd
+          system(fullCmd)
     elif models:
       for model in models:
         fullCmd = theCmd
         if model: fullCmd += '-m %s '%model
-        submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        elif dryRun: print fullCmd
+        else:
+          print fullCmd
+          system(fullCmd)
