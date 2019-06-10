@@ -5,6 +5,16 @@ def truthDipho(row):
     if not row['stage1cat']==0: return 1
     else: return 0
 
+def truthVhHad(row):
+    if row['HTXSstage0cat']==23: return 1
+    else: return 0
+
+def vhHadWeight(row, ratio):
+    weight = abs(row['weight'])
+    if row['truthVhHad']==1: 
+      return ratio * weight
+    else: return weight
+
 def truthClass(row):
     if not row['stage1cat']==0: return int(row['stage1cat']-3)
     else: return 0
