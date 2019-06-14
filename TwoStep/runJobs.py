@@ -2,15 +2,15 @@
 from os import system, path, getcwd
 from otherHelpers import submitJob
 
-#dryRun = False
-dryRun = True
+dryRun = False
+#dryRun = True
 
-#runLocal = False
-runLocal = True
+runLocal = False
+#runLocal = True
 
 myDir = getcwd()
 #baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
-baseDir = '/vols/cms/es811/Stage1categorisation/VHstudies'
+baseDir = '/vols/cms/es811/Stage1categorisation/VHstudies/Pass1'
 #years = ['2016','2017']
 
 #years = ['2016']
@@ -28,14 +28,33 @@ intLumi = 41.5
 #dataFrame = None
 #sigFrame  = None
 
-script    = 'vhHadCategorisation.py'
-paramSets = [None]
-#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
-models    = None
-classModel = None
-dataFrame = 'vhHadTotal.pkl'
+#script    = 'vhHadCategorisation.py'
+#paramSets = [None]
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'vhHadTotal.pkl'
 #dataFrame = None
-sigFrame  = None
+#sigFrame  = None
+
+script    = 'dataSignificancesVHhad.py'
+models    = ['vhHadModel.model']
+classModel = None
+paramSets = [None]
+for params in paramSets:
+  if not params: continue
+  params = params.split(',')
+  name = 'diphoModel'
+  for param in params:
+    var = param.split(':')[0]
+    val = param.split(':')[1]
+    name += '__%s_%s'%(var,str(val))
+  name += '.model'
+  models.append(name)
+paramSets = None
+dataFrame = None
+#dataFrame = 'dataTotal.pkl'
+sigFrame  = 'vhHadTotal.pkl'
 
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']
