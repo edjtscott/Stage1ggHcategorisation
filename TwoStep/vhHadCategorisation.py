@@ -29,8 +29,8 @@ theProcs = procFileMap.keys()
 
 #define variables to be used
 allVars    = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM', 'dipho_mva', 
-              'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dipho_dijet_ptHjj', 'dijet_dipho_dphi_trunc',
-              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'HTXSstage0cat', 'HTXSstage1_1_cat', 'dipho_mass']
+              'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'dipho_dijet_ptHjj', 'dijet_dipho_dphi_trunc',
+              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'tempStage1bin', 'dipho_mass']
 
 vhHadVars  = ['dipho_lead_ptoM', 'dipho_sublead_ptoM', 'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_Mjj', 'dijet_abs_dEta', 'cosThetaStar']
 
@@ -71,10 +71,11 @@ if not opts.dataFrame:
 
   #add the target variable and the equalised weight
   trainTotal['truthVhHad'] = trainTotal.apply(truthVhHad,axis=1)
-  sigSumW = np.sum(trainTotal[trainTotal.truthVhHad>0.5]['weight'].values)
-  bkgSumW = np.sum(trainTotal[trainTotal.truthVhHad<0.5]['weight'].values)
+  sigSumW = np.sum(trainTotal[trainTotal.truthVhHad==1]['weight'].values)
+  bkgSumW = np.sum(trainTotal[trainTotal.truthVhHad==0]['weight'].values)
   print 'sigSumW, bkgSumW, ratio = %.3f, %.3f, %.3f'%(sigSumW, bkgSumW, sigSumW/bkgSumW)
   trainTotal['vhHadWeight'] = trainTotal.apply(vhHadWeight, axis=1, args=[bkgSumW/sigSumW])
+  trainTotal = trainTotal[trainTotal.truthVhHad>-0.5]
 
   #save as a pickle file
   if not path.isdir(frameDir): 
@@ -120,11 +121,30 @@ testMatrix  = xg.DMatrix(vhHadTestX, label=vhHadTestY, weight=vhHadTestFW, featu
 trainParams = {}
 trainParams['objective'] = 'binary:logistic'
 trainParams['nthread'] = 1
+trainParams['seed'] = 123456
+
+#add any specified training parameters
+paramExt = ''
+if opts.trainParams:
+  paramExt = '__'
+  for pair in opts.trainParams:
+    key  = pair.split(':')[0]
+    data = pair.split(':')[1]
+    trainParams[key] = data
+    paramExt += '%s_%s__'%(key,data)
+  paramExt = paramExt[:-2]
 
 #train the BDT
 print 'about to train diphoton BDT'
 vhHadModel = xg.train(trainParams, trainMatrix)
 print 'done'
+
+#save it
+modelDir = trainDir.replace('trees','models')
+if not path.isdir(modelDir):
+  system('mkdir -p %s'%modelDir)
+vhHadModel.save_model('%s/vhHadModel%s.model'%(modelDir,paramExt))
+print 'saved as %s/vhHadModel%s.model'%(modelDir,paramExt)
 
 #evaluate performance using area under the ROC curve
 vhHadPredYtrain = vhHadModel.predict(trainMatrix)

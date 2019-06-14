@@ -6,11 +6,12 @@ def truthDipho(row):
     else: return 0
 
 def truthVhHad(row):
-    if row['HTXSstage0cat']==23: return 1
-    else: return 0
+    if row['tempStage1bin']==203: return 1
+    elif row['tempStage1bin']>107 and row['tempStage1bin']<111: return 0
+    else: return -1
 
 def vhHadWeight(row, ratio):
-    weight = abs(row['weight'])
+    weight = 1000. * abs(row['weight'])
     if row['truthVhHad']==1: 
       return ratio * weight
     else: return weight
