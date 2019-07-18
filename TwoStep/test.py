@@ -59,7 +59,7 @@ plotVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta',
 #latex
 #plotVarsX = ['$p_{T}^{\gamma_{1}}\m_{\gamma\gamma}$', '$p_{T}^{\gamma_{2}}\m_{\gamma\gamma}$', 'Diphoton MVA score', '$\eta_{j_1}$','$\eta_{j_2}$','$p_T^{j_1}$','$p_T^{j_2}$', '$\mid\Delta\eta_{jj}\mid$', '$m_{jj}$','number of jets', '$\cos\theta^*$', '$m_{\gamma\gamma}$'] 
 
-plotVarsX=['lead photon pT', 'sublead photon pT', 'diphoton MVA score', 'lead jet eta', 'sublead jet eta', 'lead jet pT', 'sublead jet pT', 'dijet dEta', 'dijet Mjj', 'number of jets', 'cosThetaStar','diphoton invariant mass']
+plotVarsX=['lead photon pT/mgg', 'sublead photon pT/mgg', 'diphoton MVA score', 'lead jet eta', 'sublead jet eta', 'lead jet pT', 'sublead jet pT', 'dijet dEta', 'dijet Mjj', 'number of jets', 'cosThetaStar','diphoton invariant mass']
 
 plotVarsR=[(0,5),(0,5),(-1,1), (-3,3),(-3,3),(0,800),(0,800),(0,6),(0,1500),(0,8),(-1,1),(100,180)]
 

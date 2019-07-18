@@ -5,24 +5,56 @@ from otherHelpers import submitJob
 dryRun = False
 #dryRun = True
 
+runLocal = False
+#runLocal = True
+
 myDir = getcwd()
-baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
+#baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
+baseDir = '/eos/user/s/sbonomal/VH_categorisation/samples_20_06_2019'
 #years = ['2016','2017']
 
-years = ['2016']
-intLumi = 35.9
+#years = ['2016']
+#intLumi = 35.9
 
-#years = ['2017']
-#intLumi = 41.5
+years = ['2017']
+intLumi = 41.5
 
-script    = 'diphotonCategorisation.py'
+#script    = 'diphotonCategorisation.py'
+##paramSets = [None]
+#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'trainTotal.pkl'
+#dataFrame = None
+#sigFrame  = None
+
+#script    = 'vhHadCategorisation.py'
 #paramSets = [None]
-paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
-models    = None
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'vhHadTotal.pkl'
+#dataFrame = None
+#sigFrame  = None
+
+script    = 'dataSignificancesVHhad.py'
+models    = ['vhHadModel.model']
 classModel = None
-#dataFrame = 'trainTotal.pkl'
-dataFrame = None
-sigFrame  = None
+paramSets = [None]
+for params in paramSets:
+  if not params: continue
+  params = params.split(',')
+  name = 'diphoModel'
+  for param in params:
+    var = param.split(':')[0]
+    val = param.split(':')[1]
+    name += '__%s_%s'%(var,str(val))
+  name += '.model'
+  models.append(name)
+paramSets = None
+#dataFrame = None
+dataFrame = 'dataTotal.pkl'
+sigFrame  = 'vhHadTotal.pkl'
 
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']
@@ -122,9 +154,17 @@ if __name__=='__main__':
       for params in paramSets:
         fullCmd = theCmd 
         if params: fullCmd += '--trainParams %s '%params
-        submitJob( jobDir, fullCmd, params=params, dryRun=dryRun )
+        if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        elif dryRun: print fullCmd
+      else:
+          print fullCmd
+          system(fullCmd)
     elif models:
       for model in models:
         fullCmd = theCmd
         if model: fullCmd += '-m %s '%model
-        submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        elif dryRun: print fullCmd
+      else:
+          print fullCmd
+          system(fullCmd)

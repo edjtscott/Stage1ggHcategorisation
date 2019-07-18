@@ -17,6 +17,11 @@ from root_numpy import fill_hist
 import usefulStyle as useSty
 
 from matplotlib import rc
+from bayes_opt import BayesianOptimization
+
+
+
+
 pd.options.mode.chained_assignment = None
 
 np.random.seed(42)
@@ -160,19 +165,24 @@ vhHadTrainM,  vhHadTestM  = np.split( vhHadM,  [trainLimit] )
 #set up the training and testing matrices
 trainMatrix = xg.DMatrix(vhHadTrainX, label=vhHadTrainY, weight=vhHadTrainTW, feature_names=vhHadVars)
 testMatrix  = xg.DMatrix(vhHadTestX, label=vhHadTestY, weight=vhHadTestFW, feature_names=vhHadVars)
+
+
+
 trainParams = {}
 trainParams['objective'] = 'binary:logistic'
 trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 #playing with parameters
 
-trainParams['max_depth']= 6
+trainParams['max_depth']=6
 trainParams['subsample']=1
 trainParams['colsample_bytree']=1
-trainParams['min_child_weight']=0
+trainParams['min_child_weight']= 0
 trainParams['gamma']=0
 trainParams['eval_metric']='auc'
 
 trainParams['seed'] = 123456
+#trainParams['reg_alpha']=
+#trainParams['reg_lambda']=
 
 #add any specified training parameters
 paramExt = ''
@@ -334,7 +344,7 @@ plotVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta',
 
 plotVarsX=['lead photon pT/mgg', 'sublead photon pT/mgg', 'diphoton MVA score', 'lead jet eta', 'sublead jet eta', 'lead jet pT', 'sublead jet pT', 'dijet dEta', 'dijet Mjj', 'number of jets', 'oosThetaStar','diphoton invariant mass','dijet dipho cos phi', 'dijet dipho dEta','dijet centrality gg','dijet jet1 QGL','dijet jet2 QGL']
 
-plotVarsR=[(0,5),(0,5),(-1,1), (-3,3),(-3,3),(0,300),(0,300),(0,6),(60,120),(0,8),(-1,1),(100,180),(-1,1),(-3,3),(0,600),(0,8),(0,1),(0,2),(0,1)]
+plotVarsR=[(0,5),(0,5),(-1,1), (-3,3),(-3,3),(0,300),(0,300),(0,6),(60,120),(0,8),(-1,1),(100,180),(-1,1),(-3,3),(0,600),(0,8),(0,1),(-100, 100),(-100,100)]
 
 #separate dataframes to plot
 df_ggh = trainTotal[trainTotal['proc']=='ggh']
