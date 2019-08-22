@@ -10,11 +10,26 @@ def truthVhHad(row):
     elif row['tempStage1bin']>107 and row['tempStage1bin']<111:return 0
     else:return -1
 
+def truthProcess(row):
+    if row['proc']=='ggh': return 0
+    elif row['proc']=='vbf': return 1
+    else:return 2
+
+
 def vhHadWeight(row, ratio):
     weight =1000. * abs(row['weight'])
     if row['truthVhHad']==1: 
       return ratio * weight
     else: return weight
+
+def ProcessWeight(row,ratio1, ratio2):
+    weight =1000. * abs(row['weight'])
+    if row['truthProcess']==0:
+       return ratio1 * weight
+    elif row['truthProcess']==1:
+       return ratio2 * weight
+    else: return weight 
+
 
 def truthClass(row):
     if not row['stage1cat']==0: return int(row['stage1cat']-3)
