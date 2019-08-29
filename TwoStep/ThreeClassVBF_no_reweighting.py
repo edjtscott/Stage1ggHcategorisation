@@ -149,8 +149,14 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
 
   trainTotal['ProcessWeight'] = trainTotal.apply(ProcessWeight, axis=1, args=[dataSumW/gghSumW,dataSumW/vbfSumW])#multiply each of the VH weight values by sum of nonsig weight/sum of sig weight 
 
-#trainTotal = trainTotal[trainTotal.truthVhHad>-0.5]
+#applying lum factors for ggh and vbf for training without equalised weights
   trainTotal['weightLUM'] = trainTotal.apply(lumiadjust, axis=1, args=[41.5])
+
+
+
+
+#trainTotal = trainTotal[trainTotal.truthVhHad>-0.5]
+
   print 'done weight equalisation'
 
 #save as a pickle file
@@ -205,7 +211,7 @@ BDTTrainM,  BDTTestM  = np.split( BDTM,  [trainLimit] )
 
 
 #set up the training and testing matrices
-trainMatrix = xg.DMatrix(BDTTrainX, label=BDTTrainY, weight=BDTTrainTW, feature_names=BDTVars)
+trainMatrix = xg.DMatrix(BDTTrainX, label=BDTTrainY, weight=BDTTrainFW, feature_names=BDTVars)
 testMatrix  = xg.DMatrix(BDTTestX, label=BDTTestY, weight=BDTTestFW, feature_names=BDTVars)
 
 
@@ -219,7 +225,7 @@ trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 
 
 #playing with parameters
-trainParams['eta']=0.4
+trainParams['eta']=0.1
 trainParams['max_depth']=10
 trainParams['subsample']=1
 trainParams['colsample_bytree']=1
@@ -247,7 +253,7 @@ watchlist  = [(trainMatrix,'train'), (testMatrix, 'eval')]
 
 #train the BDT (specify number of epochs here)
 print 'about to train BDT'
-ThreeClassModel = xg.train(trainParams, trainMatrix,60,watchlist)
+ThreeClassModel = xg.train(trainParams, trainMatrix,10,watchlist)
 print 'done'
 print progress
 

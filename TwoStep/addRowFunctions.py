@@ -30,6 +30,17 @@ def ProcessWeight(row,ratio1, ratio2):
        return ratio2 * weight
     else: return weight 
 
+def lumiadjust(row,lum):
+    weight =1000. * abs(row['weight'])
+    if row['truthProcess']==0:
+       return lum* weight
+    elif row['truthProcess']==1:
+       return lum * weight
+    else: return weight
+
+
+
+
 
 def truthClass(row):
     if not row['stage1cat']==0: return int(row['stage1cat']-3)

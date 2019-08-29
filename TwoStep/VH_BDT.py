@@ -48,12 +48,53 @@ if opts.trainParams: opts.trainParams = opts.trainParams.split(',')#separate tra
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}# a dictionary with file names
 theProcs = procFileMap.keys()# list of keys i.e 'ggh','vbf','vh'
 
+allVars = ['dipho_leadIDMVA','dipho_subleadIDMVA','dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar', 'dipho_cosphi', 'vtxprob','sigmarv','sigmawv','weight', 'tempStage1bin','dipho_mass','dipho_leadEta','dipho_subleadEta','cos_dijet_dipho_dphi','dijet_Zep','dijet_jet1_QGL','dijet_jet2_QGL','dijet_minDRJetPho']
 
-allVars = ['dipho_leadIDMVA','dipho_subleadIDMVA','dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar', 'dipho_cosphi', 'vtxprob','sigmarv','sigmawv','weight', 'tempStage1bin','dipho_mass','dipho_leadEta','dipho_subleadEta','cos_dijet_dipho_dphi','dijet_Zep','dijet_jet1_QGL','dijet_jet2_QGL']
+
+###____adding data file for the HIG 16 040 comparison________
+dataFileMap = {'Data':'Data.root'}
+dataTotal = None
+if not opts.dataFrame:
+  dataFrames = {}
+  #get the trees, turn them into arrays
+  for proc,fn in dataFileMap.iteritems():
+    dataFile = upr.open('%s/%s'%(trainDir,fn))
+    dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_VBFDiJet'%proc]
+    dataFrames[proc] = dataTree.pandas.df(allVars)
+    dataFrames[proc]['proc'] = proc
+  print 'got trees for normal background'
+
+  dataTotal = dataFrames['Data']
+
+  dataTotal = dataTotal[dataTotal.dipho_mass>100.]
+  dataTotal = dataTotal[dataTotal.dipho_mass<180.]
+
+  dataTotal = dataTotal[dataTotal.dipho_leadIDMVA>-0.9]
+  dataTotal = dataTotal[dataTotal.dipho_subleadIDMVA>-0.9]
+  dataTotal = dataTotal[dataTotal.dijet_Mjj>60.]
+  dataTotal = dataTotal[dataTotal.dijet_Mjj<120.]
+
+  dataTotal = dataTotal[dataTotal.dipho_lead_ptoM>0.5]
+  dataTotal = dataTotal[dataTotal.dipho_sublead_ptoM>0.25]
+  dataTotal = dataTotal[dataTotal.dipho_mva>0.79]
+  dataTotal = dataTotal[dataTotal.dijet_nj>1]
+  dataTotal = dataTotal[dataTotal.dijet_LeadJPt>40]
+  dataTotal = dataTotal[dataTotal.dijet_SubJPt>40]
+  dataTotal = dataTotal[dataTotal.dijet_leadEta<2.4]
+  dataTotal = dataTotal[dataTotal.dijet_subleadEta<2.4]
+  dataTotal = dataTotal[dataTotal.dijet_minDRJetPho>0.4]
+  dataTotal = dataTotal[dataTotal.cosThetaStar<0.5]
+
+#_______________________________________________
+
+
+
+allVars = ['dipho_leadIDMVA','dipho_subleadIDMVA','dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar', 'dipho_cosphi', 'vtxprob','sigmarv','sigmawv','weight', 'tempStage1bin','dipho_mass','dipho_leadEta','dipho_subleadEta','cos_dijet_dipho_dphi','dijet_Zep','dijet_jet1_QGL','dijet_jet2_QGL','dijet_minDRJetPho']
 
 
 #either get existing data frame or create it
 trainTotal = None
+df_H1G = None
 if not opts.dataFrame:#if the dataframe option was not used while running, create dataframe from files in folder
   trainFrames = {}
   #get the trees, turn them into arrays
@@ -71,6 +112,7 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   for proc in theProcs:
       trainList.append(trainFrames[proc])
   trainTotal = pd.concat(trainList)
+  df_HIG = pd.concat(trainList)
   del trainFrames
   print 'created total frame'
 
@@ -93,6 +135,87 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   trainTotal = trainTotal[trainTotal.dijet_Mjj>60.]
   trainTotal = trainTotal[trainTotal.dijet_Mjj<120.]
   print 'done mjj cuts'
+
+#__________________________________HIG_16_040 cuts for comparison____________________________
+
+  print 'checking HIG 16 040 significance'  
+
+  df_HIG = df_HIG[df_HIG.dipho_mass>100.]
+  df_HIG = df_HIG[df_HIG.dipho_mass<180.]
+  
+  df_HIG = df_HIG[df_HIG.dipho_leadIDMVA>-0.9]
+  df_HIG = df_HIG[df_HIG.dipho_subleadIDMVA>-0.9]
+  df_HIG = df_HIG[df_HIG.dijet_Mjj>60.]
+  df_HIG = df_HIG[df_HIG.dijet_Mjj<120.]
+
+  df_H1G = df_HIG[df_HIG.dipho_lead_ptoM>0.5]
+  df_HIG = df_HIG[df_HIG.dipho_sublead_ptoM>0.25]
+  df_HIG = df_HIG[df_HIG.dipho_mva>0.79]
+  df_HIG = df_HIG[df_HIG.dijet_nj>1]
+  df_HIG = df_HIG[df_HIG.dijet_LeadJPt>40]
+  df_HIG = df_HIG[df_HIG.dijet_SubJPt>40]
+  df_HIG = df_HIG[df_HIG.dijet_leadEta<2.4]
+  df_HIG = df_HIG[df_HIG.dijet_subleadEta<2.4]
+  df_HIG = df_HIG[df_HIG.dijet_minDRJetPho>0.4]
+  df_HIG = df_HIG[df_HIG.cosThetaStar<0.5]
+  
+
+  df_HIG['truthVhHad'] = df_HIG.apply(truthVhHad,axis=1)
+  signal_weight = np.sum(df_HIG[df_HIG.truthVhHad==1]['weight'].values)
+  ggh_background_weight = np.sum(df_HIG[df_HIG.truthVhHad==0]['weight'].values) 
+
+  #____INTEGRATING BACKGROUND UNDER THE PEAK_____
+  print 'finding background under peak'
+  bkgHist = r.TH1F('bkgHistTemp','bkgHistTemp',160,100,180)
+  fill_hist(bkgHist, dataTotal['dipho_mass'].values, weights=dataTotal['weight'].values)
+   
+  sigHist = r.TH1F('sigHistTemp', 'sigHistTemp', 160,100,180)
+  fill_hist(sigHist, df_HIG['dipho_mass'].values, weights = df_HIG['weight'].values)
+
+
+  print 'data weights'
+  print dataTotal['weight'].values
+  print 'getting effective sigma'
+ # from catOptim import getRealSigma
+  def getRealSigma(hist):
+    sigma = 2.
+    if hist.GetEntries() > 0 and hist.Integral()>0.000001:
+      hist.Fit('gaus')
+      fit = hist.GetFunction('gaus')
+      sigma = fit.GetParameter(2)
+    return sigma
+
+  effective_sigma = getRealSigma(sigHist)
+  print 'effective sigma is'
+  print effective_sigma
+
+  #from catOptim import computeBkg
+  def computeBkg(hist, effSigma ):
+    bkgVal = 9999.
+    #if hist.GetEntries() > 0 and hist.Integral()>0.000001:
+    if hist.GetEffectiveEntries() > 10 and hist.Integral()>0.000001:
+      hist.Fit('expo')
+      fit = hist.GetFunction('expo')
+      bkgVal = fit.Integral(125. - effSigma, 125. + effSigma)
+    return bkgVal
+  
+  background_under_peak = computeBkg(bkgHist,effective_sigma)
+  print 'background under peak is'
+  print background_under_peak  
+  
+  #background_weight = np.sum(dataTotal['weight'].values) 
+  background_weight = background_under_peak
+  berr =3
+  term_a = (signal_weight*41.5)+background_weight+berr
+  term_b = (1+np.true_divide(signal_weight*41.5,background_weight+berr))
+  c_bin = np.sqrt(2*(term_a*np.log(term_b)-signal_weight*41.5))
+
+  print 'the significance by applying HIG 16 040 cuts is'
+  print c_bin
+
+#____________________________________________________________________________________________
+
+
 
 
 #adding variables that need to be calculated
