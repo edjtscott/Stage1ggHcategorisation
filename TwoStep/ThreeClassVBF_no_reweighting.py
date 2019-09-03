@@ -294,6 +294,147 @@ print 'labels'
 BDTPredClassTrain = np.argmax(BDTPredYtrain,axis=1)
 BDTPredClassTest = np.argmax(BDTPredYtest,axis=1)
 
+
+################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --trainset--vbf prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==2)],bins=50,weights=BDTTrainFW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_train_vbf_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_train_vbf_prob.pdf',bbox_inches = 'tight')
+###########################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --testset--vbf prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtest[:,1])[(BDTTestY==2)],weights=BDTTestFW[(BDTTestY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtest[:,1])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtest[:,1])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_test_vbf_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_test_vbf_prob.pdf',bbox_inches = 'tight')
+################################################################################
+################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --trainset--ggh prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==2)],bins=50,weights=BDTTrainFW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_train_ggh_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_train_ggh_prob.pdf',bbox_inches = 'tight')
+###########################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --testset-- ggh prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==2)],weights=BDTTestFW[(BDTTestY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_test_ggh_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_test_ggh_prob.pdf',bbox_inches = 'tight')
+################################################################################
+
+
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --trainset--bkg prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtrain[:,2])[(BDTTrainY==2)],bins=50,weights=BDTTrainFW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtrain[:,2])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtrain[:,2])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_train_bkg_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_train_bkg_prob.pdf',bbox_inches = 'tight')
+###########################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --testset-- bkg prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtest[:,2])[(BDTTestY==2)],weights=BDTTestFW[(BDTTestY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtest[:,2])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtest[:,2])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_test_bkg_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_test_bkg_prob.pdf',bbox_inches = 'tight')
+################################################################################
+
+print 'checking yields based on vbf probabilities for different probability cut values'
+
+cutVal_list = [0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6]
+testScale = 1./(1.-trainFrac)
+for cutVal in cutVal_list:#BDT boundaries--we are using 3 VH tag categories?
+  selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * ((BDTPredYtest[:,1])>cutVal) )
+  selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * ((BDTPredYtest[:,1])>cutVal) )
+  selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * ((BDTPredYtest[:,1])>cutVal) )
+
+  selectedtotal = selectedvbf+selectedggh+selectedbkg 
+  print 'Selected events for a cut value of %.2f: vbf %.3f, ggh %.3f, bkg %.3f'%(cutVal, selectedvbf, selectedggh, selectedbkg)
+  print 'fractions for a cut value of %.2f: vbf %.3f, ggh %.3f, bkg %.3f'%(cutVal,selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal) 
+
+print 'checking the yields based on argmax-vbf class'
+selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==1))
+selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==1))
+selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * (BDTPredClassTest==1))
+
+selectedtotal = selectedvbf+selectedggh+selectedbkg
+print 'Selected events with argmax: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf, selectedggh, selectedbkg)
+print 'fractions for argmax selection: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal)
+
+print 'checking the yields based on argmax-ggh class'
+selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==0))
+selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==0))
+selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * (BDTPredClassTest==0))
+
+selectedtotal = selectedvbf+selectedggh+selectedbkg
+print 'Selected events with argmax: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf, selectedggh, selectedbkg)
+print 'fractions for argmax selection: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal)
+
+
+print 'checking the yields based on argmax-bkg class'
+selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==2))
+selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==2))
+selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * (BDTPredClassTest==2))
+
+selectedtotal = selectedvbf+selectedggh+selectedbkg
+print 'Selected events with argmax: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf, selectedggh, selectedbkg)
+print 'fractions for argmax selection: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal)
+
+
+
+###############################################################################
+
 #SCORE PLOT
 print 'making MVA score plot'
 plt.figure()
