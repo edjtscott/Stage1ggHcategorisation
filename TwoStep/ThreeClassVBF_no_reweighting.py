@@ -130,7 +130,7 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   gghSumW = np.sum(trainTotal[trainTotal.truthProcess==0]['weight'].values)#summing weights of ggh events
   vbfSumW = np.sum(trainTotal[trainTotal.truthProcess==1]['weight'].values)#summing weights of vbf events
   dataSumW = np.sum(trainTotal[trainTotal.truthProcess==2]['weight'].values)#summing weights of data events  
-
+  totalSumW = gghSumW+vbfSumW+dataSumW
 #getting number of events
   ggH_df = trainTotal[trainTotal.truthProcess==0]
   vbf_df = trainTotal[trainTotal.truthProcess==1]
@@ -143,16 +143,34 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   print 'data events'
   print data_df.shape[0]
 
-
+  print 'weights before lum adjustment'
   print 'gghSumW, vbfSumW, dataSumW, ratio_ggh_data, ratio_vbf_data = %.3f, %.3f, %.3f, %.3f,%.3f'%(gghSumW, vbfSumW,dataSumW, gghSumW/dataSumW, vbfSumW/dataSumW)
+  print 'ratios'
+  print 'ggh ratio, vbf ratio, bkg ratio = %.3f, %.3f, %.3f'%(gghSumW/totalSumW, vbfSumW/totalSumW, dataSumW/totalSumW)
 
 
   trainTotal['ProcessWeight'] = trainTotal.apply(ProcessWeight, axis=1, args=[dataSumW/gghSumW,dataSumW/vbfSumW])#multiply each of the VH weight values by sum of nonsig weight/sum of sig weight 
 
 #applying lum factors for ggh and vbf for training without equalised weights
-  trainTotal['weightLUM'] = trainTotal.apply(lumiadjust, axis=1, args=[41.5])
+  def weight_adjust (row):
+      if row['truthProcess'] == 0:
+         return 41500. * row['weight']
+      if row['truthProcess'] == 1:
+         return 41500. * row['weight']
+      if row['truthProcess'] == 2:
+         return 1000. * row ['weight']
+
+  trainTotal['weightLUM'] = trainTotal.apply(weight_adjust, axis=1)
 
 
+  gghSumW = np.sum(trainTotal[trainTotal.truthProcess==0]['weightLUM'].values)#summing weights of ggh events
+  vbfSumW = np.sum(trainTotal[trainTotal.truthProcess==1]['weightLUM'].values)#summing weights of vbf events
+  dataSumW = np.sum(trainTotal[trainTotal.truthProcess==2]['weightLUM'].values)#summing weights of data events
+  totalSumW = gghSumW+vbfSumW+dataSumW
+
+  print 'weights after lum adjustment'
+  print 'gghSumW, vbfSumW, dataSumW, ratio_ggh_data, ratio_vbf_data = %.3f, %.3f, %.3f, %.3f,%.3f'%(gghSumW, vbfSumW,dataSumW,gghSumW/dataSumW, vbfSumW/dataSumW)
+  print 'ggh ratio, vbf ratio, bkg ratio = %.3f, %.3f, %.3f'%(gghSumW/totalSumW, vbfSumW/totalSumW, dataSumW/totalSumW)
 
 
 #trainTotal = trainTotal[trainTotal.truthVhHad>-0.5]
@@ -253,7 +271,7 @@ watchlist  = [(trainMatrix,'train'), (testMatrix, 'eval')]
 
 #train the BDT (specify number of epochs here)
 print 'about to train BDT'
-ThreeClassModel = xg.train(trainParams, trainMatrix,10,watchlist)
+ThreeClassModel = xg.train(trainParams, trainMatrix,8,watchlist)
 print 'done'
 print progress
 
