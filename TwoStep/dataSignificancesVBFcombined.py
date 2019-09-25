@@ -91,7 +91,7 @@ if not opts.signalFrame:
   
   #some extra cuts that are applied for diphoton BDT in the AN
   #trainTotal = trainTotal[trainTotal.leadmva>-0.9]
-  #trainTotal = trainTotal[trainTotal.subleadmva>-0.9] #FIXME try changing these as in paper
+  #trainTotal = trainTotal[trainTotal.subleadmva>-0.9] #change these as in paper
   trainTotal = trainTotal[trainTotal.leadmva>-0.2]
   trainTotal = trainTotal[trainTotal.subleadmva>-0.2]
   trainTotal = trainTotal[trainTotal.leadptom>0.333]
@@ -149,7 +149,7 @@ if not opts.dataFrame:
   
   #some extra cuts that are applied for diphoton BDT in the AN
   #dataTotal = dataTotal[dataTotal.leadmva>-0.9]
-  #dataTotal = dataTotal[dataTotal.subleadmva>-0.9] #FIXME
+  #dataTotal = dataTotal[dataTotal.subleadmva>-0.9]
   dataTotal = dataTotal[dataTotal.leadmva>-0.2]
   dataTotal = dataTotal[dataTotal.subleadmva>-0.2]
   dataTotal = dataTotal[dataTotal.leadptom>0.333]

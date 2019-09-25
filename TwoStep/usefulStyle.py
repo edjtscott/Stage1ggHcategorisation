@@ -18,7 +18,7 @@ from ROOT import TStyle, TCanvas, TPad
 from ROOT import TLegend, TLatex, TText, TLine, TBox
 
 gStyle.SetOptStat(0)
-#gStyle.SetOptTitle(0) #FIXME
+gStyle.SetOptTitle(0)
 
 def setCanvas(split=False):
 

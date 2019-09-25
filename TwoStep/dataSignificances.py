@@ -266,7 +266,7 @@ for iClass in range(nClasses):
   sigWeights = diphoFW * (diphoJ==iClass) * (diphoR==iClass)
   bkgWeights = dataFW * (dataR==iClass)
   optimiser = CatOptim(sigWeights, diphoM, [diphoPredY], bkgWeights, dataM, [dataPredY], 2, ranges, names)
-  #optimiser.setTransform(True) #FIXME
+  #optimiser.setTransform(True)
   optimiser.optimise(opts.intLumi, opts.nIterations)
   plotDir  = plotDir.replace('Proc_%g'%(iClass-1),'Proc_%g'%iClass)
   if not path.isdir(plotDir): 
@@ -280,7 +280,7 @@ for iClass in binsRequiringThree:
   sigWeights = diphoFW * (diphoJ==iClass) * (diphoR==iClass)
   bkgWeights = dataFW * (dataR==iClass)
   optimiser = CatOptim(sigWeights, diphoM, [diphoPredY], bkgWeights, dataM, [dataPredY], 3, ranges, names)
-  #optimiser.setTransform(True) #FIXME
+  #optimiser.setTransform(True)
   optimiser.optimise(opts.intLumi, opts.nIterations)
   printStr += 'Results for bin %g : \n'%iClass
   printStr += optimiser.getPrintableResult()

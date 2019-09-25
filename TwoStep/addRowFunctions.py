@@ -59,7 +59,7 @@ def combinedWeight(row):
     return weight
 
 def normWeight(row, bkgWeight=100., zerojWeight=1.):
-    weightFactors = [0.0002994, 0.0000757, 0.0000530, 0.0000099, 0.0000029, 0.0000154, 0.0000235, 0.0000165, 0.0000104] #FIXME update these
+    weightFactors = [0.0002994, 0.0000757, 0.0000530, 0.0000099, 0.0000029, 0.0000154, 0.0000235, 0.0000165, 0.0000104] #update these at some point
     weight = row['weight']
     if row['proc'].count('qcd'): 
         weight *= 0.04 / weightFactors[ int(row['truthClass']) ] #reduce because too large by default
