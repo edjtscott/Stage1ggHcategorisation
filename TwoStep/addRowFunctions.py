@@ -14,6 +14,10 @@ def truthProcess(row):
     if row['proc']=='ggh': return 0
     elif row['proc']=='vbf': return 1
     else:return 2
+def truthProcessTwoClass(row):
+    #if row['proc']=='ggh': return 0
+    if row['proc']=='vbf': return 1
+    else:return 0
 
 
 def vhHadWeight(row, ratio):
@@ -23,12 +27,23 @@ def vhHadWeight(row, ratio):
     else: return weight
 
 def ProcessWeight(row,ratio1, ratio2):
-    weight =1000. * abs(row['weight'])
+    weight =abs(row['weightR'])
     if row['truthProcess']==0:
        return ratio1 * weight
     elif row['truthProcess']==1:
        return ratio2 * weight
     else: return weight 
+
+def ProcessWeightTwoClass(row,ratio1):
+    weight =abs(row['weightR'])
+    if row['truthProcess']==1:
+       return ratio1 * weight
+    #elif row['truthProcess']==1:
+       #return ratio2 * weight
+    else: return weight
+
+
+
 
 
 def truthClass(row):
