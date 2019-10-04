@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import xgboost as xg
 import uproot as upr
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
 import pickle
 import sklearn
 from sklearn.metrics import roc_auc_score, roc_curve
@@ -17,8 +17,8 @@ from otherHelpers import prettyHist, getAMS, computeBkg, getRealSigma
 from root_numpy import fill_hist
 import usefulStyle as useSty
 
-from matplotlib import rc
-from bayes_opt import BayesianOptimization
+#from matplotlib import rc
+#from bayes_opt import BayesianOptimization
 
 
 print 'imports done'
@@ -72,7 +72,7 @@ print 'variables chosen'
 
 #either get existing data frame or create it
 trainTotal = None
-if not opts.dataFrame:#if the dataframe option was not used while running, create dataframe from files in folder
+if not opts.dataFrame: #if the dataframe option was not used while running, create dataframe from files in folder
   trainFrames = {}
   #get the trees, turn them into arrays
   for proc,fn in procFileMap.iteritems():#proc, fn are the pairs 'proc':'fn' in the file map 
@@ -93,6 +93,13 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
 #create one total frame
   trainList = []
   for proc in theProcs:
+      if proc.lower().count('data'):
+        trainFrameLow  = trainFrames[proc][trainFrames[proc].dipho_mass<120.]
+        trainFrameHigh = trainFrames[proc][trainFrames[proc].dipho_mass>130.]
+        tempTrainList = []
+        tempTrainList.append(trainFrameLow)
+        tempTrainList.append(trainFrameHigh)
+        trainFrames[proc] = pd.concat(tempTrainList)
       trainList.append(trainFrames[proc])
   trainTotal = pd.concat(trainList)
   del trainFrames
@@ -131,7 +138,7 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   vbfSumW = np.sum(trainTotal[trainTotal.truthProcess==1]['weight'].values)#summing weights of vbf events
   dataSumW = np.sum(trainTotal[trainTotal.truthProcess==2]['weight'].values)#summing weights of data events  
 
-  print 'gghSumW, vbfSumW, dataSumW, ratio_ggh_data, ratio_vbf_data = %.3f, %.3f, %.3f, %.3f,%.3f'%(gghSumW, vbfSumW,dataSumW, gghSumW/dataSumW, vbfSumW/dataSumW)
+  print 'gghSumW, vbfSumW, dataSumW, ratio_ggh_data, ratio_vbf_data = %.3f, %.3f, %.3f, %.3f,%.3f'%(gghSumW, vbfSumW, dataSumW, gghSumW/float(dataSumW), vbfSumW/float(dataSumW))
 
 
   trainTotal['ProcessWeight'] = trainTotal.apply(ProcessWeight, axis=1, args=[dataSumW/gghSumW,dataSumW/vbfSumW])#multiply each of the VH weight values by sum of nonsig weight/sum of sig weight 
@@ -141,18 +148,18 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   print 'done weight equalisation'
 
 #save as a pickle file
-#if not path.isdir(frameDir): 
-  system('mkdir -p %s'%frameDir)
-  trainTotal.to_pickle('%s/ThreeClassTotal.pkl'%frameDir)
-  print 'frame saved as %s/ThreeClassTotal.pkl'%frameDir
+  if not path.isdir(frameDir): 
+    system('mkdir -p %s'%frameDir)
+    trainTotal.to_pickle('%s/ThreeClassTotal.pkl'%frameDir)
+    print 'frame saved as %s/ThreeClassTotal.pkl'%frameDir
 
 #read in dataframe if above steps done before
-#else:
-trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
-print 'Successfully loaded the dataframe'
+else:
+  trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
+  print 'Successfully loaded the dataframe'
 
 #set up train set and randomise the inputs
-trainFrac = 0.9
+trainFrac = 0.7
 
 
 theShape = trainTotal.shape[0]#number of rows in total dataframe
@@ -166,7 +173,9 @@ trainLimit = int(theShape*trainFrac)
 #BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho']
 
 
-BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dipho_leadR9','dipho_subleadR9','dijet_dipho_dphi_trunc','dijet_dipho_pt','dijet_mva','dipho_dijet_MVA','dijet_jet1_RMS','dijet_jet2_RMS','dipho_lead_hoe','dipho_sublead_hoe','dipho_lead_elveto','dipho_sublead_elveto','jet1_HFHadronEnergyFraction','jet1_HFEMEnergyFraction', 'jet2_HFHadronEnergyFraction','jet2_HFEMEnergyFraction']
+#BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dipho_leadR9','dipho_subleadR9','dijet_dipho_dphi_trunc','dijet_dipho_pt','dijet_mva','dipho_dijet_MVA','dijet_jet1_RMS','dijet_jet2_RMS','dipho_lead_hoe','dipho_sublead_hoe','dipho_lead_elveto','dipho_sublead_elveto','jet1_HFHadronEnergyFraction','jet1_HFEMEnergyFraction', 'jet2_HFHadronEnergyFraction','jet2_HFEMEnergyFraction']
+
+BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','cos_dijet_dipho_dphi','dijet_centrality_gg','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dijet_dipho_dphi_trunc']
 
 
 BDTX  = trainTotal[BDTVars].values# the train input variables defined in the above list
@@ -206,17 +215,6 @@ trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 
 
 #playing with parameters
-trainParams['eta']=0.4
-trainParams['max_depth']=10
-trainParams['subsample']=1
-trainParams['colsample_bytree']=1
-trainParams['min_child_weight']=0
-trainParams['gamma']=0
-trainParams['eval_metric']='merror'
-
-trainParams['seed'] = 123456
-#trainParams['reg_alpha']=
-#trainParams['reg_lambda']=
 
 #add any specified training parameters
 paramExt = ''
@@ -230,24 +228,26 @@ if opts.trainParams:
   paramExt = paramExt[:-2]
 
 progress = dict()
-watchlist  = [(trainMatrix,'train'), (testMatrix, 'eval')]
+#watchlist  = [(trainMatrix,'train'), (testMatrix, 'eval')]
 
 #train the BDT (specify number of epochs here)
 print 'about to train BDT'
 #ThreeClassModel = xg.train(trainParams, trainMatrix,60,watchlist)
+ThreeClassModel = xg.train(trainParams, trainMatrix)
 print 'done'
 #print progress
 
-ThreeClassModel = xg.Booster()
-ThreeClassModel.load_model('%s/%s'%(modelDir,opts.modelName))
+#not needed rn
+#ThreeClassModel = xg.Booster()
+#ThreeClassModel.load_model('%s/%s'%(modelDir,opts.modelName))
  
 
 #save it
-#modelDir = trainDir.replace('trees','models')
-#if not path.isdir(modelDir):
-#  system('mkdir -p %s'%modelDir)
-#ThreeClassModel.save_model('%s/ThreeClassModel%s.model'%(modelDir,paramExt))
-#print 'saved as %s/ThreeClassModel%s.model'%(modelDir,paramExt)
+modelDir = trainDir.replace('trees','models')
+if not path.isdir(modelDir):
+  system('mkdir -p %s'%modelDir)
+ThreeClassModel.save_model('%s/ThreeClassModel%s.model'%(modelDir,paramExt))
+print 'saved as %s/ThreeClassModel%s.model'%(modelDir,paramExt)
 
 
 
@@ -276,36 +276,36 @@ BDTPredClassTrain = np.argmax(BDTPredYtrain,axis=1)
 BDTPredClassTest = np.argmax(BDTPredYtest,axis=1)
 
 #SCORE PLOT
-print 'making MVA score plot'
-plt.figure()
-plt.title('MVA score plot --trainset')
-#plt.bins([0,1,2,3])
-plt.hist(BDTPredClassTrain[(BDTTrainY==0)],bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
-
-plt.hist(BDTPredClassTrain[(BDTTrainY==1)],bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
-plt.hist(BDTPredClassTrain[(BDTTrainY==2)], bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
-
-plt.xlabel('BDT class')
-
-plt.legend()
-plt.savefig('Three_MVA_score_train.png',bbox_inches = 'tight')
-plt.savefig('Three_MVA_score_train.pdf',bbox_inches = 'tight')
-
-
-plt.figure()
-plt.title('MVA score plot --testset')
-#plt.bins([0,1,2,3])
-plt.hist(BDTPredClassTest[(BDTTestY==0)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==0)],  histtype='step',normed=1, color='red',label='ggh')
-plt.hist(BDTPredClassTest[(BDTTestY==1)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==1)],  histtype='step',normed=1, color='green',label='vbf')
-plt.hist(BDTPredClassTest[(BDTTestY==2)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==2)],  histtype='step',normed=1, color='blue',label='bkg')
-
-
-plt.xlabel('BDT score')
-plt.legend()
-plt.savefig('Three_MVA_score_test.png',bbox_inches = 'tight')
-plt.savefig('Three_MVA_score_test.pdf',bbox_inches = 'tight')
-
-print 'DONE'
+#print 'making MVA score plot'
+#plt.figure()
+#plt.title('MVA score plot --trainset')
+##plt.bins([0,1,2,3])
+#plt.hist(BDTPredClassTrain[(BDTTrainY==0)],bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+#
+#plt.hist(BDTPredClassTrain[(BDTTrainY==1)],bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+#plt.hist(BDTPredClassTrain[(BDTTrainY==2)], bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+#
+#plt.xlabel('BDT class')
+#
+#plt.legend()
+#plt.savefig('Three_MVA_score_train.png',bbox_inches = 'tight')
+#plt.savefig('Three_MVA_score_train.pdf',bbox_inches = 'tight')
+#
+#
+#plt.figure()
+#plt.title('MVA score plot --testset')
+##plt.bins([0,1,2,3])
+#plt.hist(BDTPredClassTest[(BDTTestY==0)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==0)],  histtype='step',normed=1, color='red',label='ggh')
+#plt.hist(BDTPredClassTest[(BDTTestY==1)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==1)],  histtype='step',normed=1, color='green',label='vbf')
+#plt.hist(BDTPredClassTest[(BDTTestY==2)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==2)],  histtype='step',normed=1, color='blue',label='bkg')
+#
+#
+#plt.xlabel('BDT score')
+#plt.legend()
+#plt.savefig('Three_MVA_score_test.png',bbox_inches = 'tight')
+#plt.savefig('Three_MVA_score_test.pdf',bbox_inches = 'tight')
+#
+#print 'DONE'
 
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 
@@ -324,19 +324,19 @@ fpr, tpr, thresholds= roc_curve(BDTTrainY_ggh_roc, BDTPredYtrain[:,0], pos_label
 #fpr, tpr, thresholds = roc_curve(BDTTrainY, BDTPredYtrain, pos_label=0)
 #roc_auc=auc(fpr,tpr)
 print 'loaded train roc curve'
-plt.figure()
-plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train (area =%0.2f )'%roc_auc_train_ggh)
-#plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train' )
+#plt.figure()
+#plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train (area =%0.2f )'%roc_auc_train_ggh)
+##plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train' )
 fpr, tpr, thresholds = roc_curve(BDTTestY_ggh_roc, BDTPredYtest[:,0], pos_label=0,sample_weight = BDTTestFW)
 #roc_auc=auc(fpr,tpr)
 print 'loaded test roc curve'
 
-plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test (area =%0.2f )'%roc_auc_test_ggh)
-#plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test')
-plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Luck', zorder=5)
-plt.legend()
-plt.savefig('ROC_ggh.png',bbox_inches = 'tight')
-plt.savefig('ROC_ggh.pdf',bbox_inches = 'tight')
+#plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test (area =%0.2f )'%roc_auc_test_ggh)
+##plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test')
+#plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Luck', zorder=5)
+#plt.legend()
+#plt.savefig('ROC_ggh.png',bbox_inches = 'tight')
+#plt.savefig('ROC_ggh.pdf',bbox_inches = 'tight')
 
 
 #plot roc curves
@@ -349,6 +349,8 @@ print 'area under roc curve for test set_vbf     = %1.5f'%(roc_auc_score(BDTTest
 
 roc_auc_test_vbf = roc_auc_score(BDTTrainY_vbf_roc, BDTPredYtrain[:,1], sample_weight = BDTTrainTW)
 roc_auc_train_vbf = roc_auc_score(BDTTestY_vbf_roc, BDTPredYtest[:,1], sample_weight = BDTTestFW) 
+
+exit("ED FIXME exit before plotting")
 
 
 fpr, tpr, thresholds = roc_curve(BDTTrainY_vbf_roc, BDTPredYtrain[:,1], pos_label=1,sample_weight = BDTTrainTW)

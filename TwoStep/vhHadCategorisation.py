@@ -61,6 +61,13 @@ if not opts.dataFrame:
   #create one total frame
   trainList = []
   for proc in theProcs:
+      if proc.lower.count('data'):
+        trainFrameLow  = trainFrames[proc][trainFrames[proc].CMS_hgg_mass<120.]
+        trainFrameHigh = trainFrames[proc][trainFrames[proc].CMS_hgg_mass>130.]
+        tempTrainList = []
+        tempTrainList.append(trainFrameLow)
+        tempTrainList.append(trainFrameHigh)
+        trainFrames[proc] = pd.concat(tempTrainList)
       trainList.append(trainFrames[proc])
   trainTotal = pd.concat(trainList)
   del trainFrames
