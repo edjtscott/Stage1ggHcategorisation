@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import xgboost as xg
 import uproot as upr
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
 import pickle
 import sklearn
 from sklearn.metrics import roc_auc_score, roc_curve
@@ -17,8 +17,8 @@ from otherHelpers import prettyHist, getAMS, computeBkg, getRealSigma
 from root_numpy import fill_hist
 import usefulStyle as useSty
 
-from matplotlib import rc
-from bayes_opt import BayesianOptimization
+#from matplotlib import rc
+#from bayes_opt import BayesianOptimization
 
 
 print 'imports done'
@@ -312,9 +312,9 @@ testMatrix  = xg.DMatrix(BDTTestX, label=BDTTestY, weight=BDTTestTW, feature_nam
 #testMatrix  = xg.DMatrix(BDTTestX, label=BDTTestY, weight=BDTTestTW, feature_names=BDTVars)
 
 trainParams = {}
-#trainParams['objective'] = 'binary:logistic'
-trainParams['objective'] = 'multi:softprob'
-trainParams['num_class']=2
+trainParams['objective'] = 'binary:logistic'
+#trainParams['objective'] = 'multi:softprob'
+#trainParams['num_class']=2
 
 trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 
@@ -327,9 +327,9 @@ trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 #trainParams['colsample_bytree']=0.7
 #trainParams['min_child_weight']=0
 #trainParams['gamma']=0
-trainParams['eval_metric']='merror'
+#trainParams['eval_metric']='merror'
 
-trainParams['seed'] = 123456
+#trainParams['seed'] = 123456
 #trainParams['reg_alpha']=0.1
 #trainParams['reg_lambda']=
 
@@ -358,7 +358,8 @@ print 'trying cross-validation'
 
 #train the BDT (specify number of epochs here)
 print 'about to train BDT'
-TwoClassModel = xg.train(trainParams, trainMatrix,15,watchlist)
+#TwoClassModel = xg.train(trainParams, trainMatrix,15,watchlist)
+TwoClassModel = xg.train(trainParams, trainMatrix)
 print 'done'
 print progress
 
@@ -400,6 +401,8 @@ BDTPredClassTrain = np.argmax(BDTPredYtrain,axis=1)
 BDTPredClassTest = np.argmax(BDTPredYtest,axis=1)
 print 'testing argmax'
 print np.argmax([0.01,0.015])
+
+exit('temp exit before plotting')
 
 ################################################################
 print 'making MVA prob score plot for all'
