@@ -214,27 +214,37 @@ print 'Successfully loaded the dataframe'
 
 
 #______________________-getting the data.root for the bkg yields later__________________________
-#dataTotal = None
-#dataFile   = upr.open('%s/%s'%(trainDir,'Data.root'))
-      
-#dataTree = dataFile['vbfTagDumper/trees/Data_13TeV_GeneralDipho']
-#dataFrame = trainTree.pandas.df(allVars)
-#dataFrame['proc'] = 'Data'
-#dataTotal = dataFrame
-#dataTotal = dataTotal[dataTotal.dipho_mass>100.]
-#dataTotal = dataTotal[dataTotal.dipho_mass<180.]# diphoton mass range*********remove the signal region?
+dataTotal = None
+dataFrame = None
+dataFileMap = {'Data':'Data.root'}
+for proc,fn in dataFileMap.iteritems():#proc, fn are the pairs 'proc':'fn' in the file map                                                                                                                                                 
+      dataFile   = upr.open('%s/%s'%(trainDir,fn))
+      dataTree = dataFile['vbfTagDumper/trees/Data_13TeV_GeneralDipho']
+      dataTotal = dataTree.pandas.df(allVars)
+      #dataFrame['proc'] = 'Data'
+      #dataTotal = dataFrame  
+#del dataFrame
+print 'created total data frame'
+
+
+
+
+
+dataTotal = dataFrame
+dataTotal = dataTotal[dataTotal.dipho_mass>100.]
+dataTotal = dataTotal[dataTotal.dipho_mass<180.]# diphoton mass range*********remove the signal region?
   
 
-#dataTotal = dataTotal[dataTotal.dipho_leadIDMVA>-0.2]
-#dataTotal = dataTotal[dataTotal.dipho_subleadIDMVA>-0.2]
-#dataTotal = dataTotal[dataTotal.dipho_lead_ptoM>0.333]
-#dataTotal = dataTotal[dataTotal.dipho_sublead_ptoM>0.25]
+dataTotal = dataTotal[dataTotal.dipho_leadIDMVA>-0.2]
+dataTotal = dataTotal[dataTotal.dipho_subleadIDMVA>-0.2]
+dataTotal = dataTotal[dataTotal.dipho_lead_ptoM>0.333]
+dataTotal = dataTotal[dataTotal.dipho_sublead_ptoM>0.25]
 
 
-#dataTotal = dataTotal[dataTotal.dijet_LeadJPt>40.]
-#dataTotal = dataTotal[dataTotal.dijet_SubJPt>30.]
+dataTotal = dataTotal[dataTotal.dijet_LeadJPt>40.]
+dataTotal = dataTotal[dataTotal.dijet_SubJPt>30.]
  
-#dataTotal = dataTotal[dataTotal.dijet_Mjj>250.]
+dataTotal = dataTotal[dataTotal.dijet_Mjj>250.]
 
 
 

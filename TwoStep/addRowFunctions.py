@@ -2,7 +2,7 @@ def addPt(row):
     return row['CMS_hgg_mass']*row['diphoptom']
 
 def truthDipho(row):
-    if not row['stage1cat']==0: return 1
+    if not row['HTXSstage1cat']==0: return 1
     else: return 0
 
 #def truthVhHad(row):
@@ -78,7 +78,7 @@ def diphoWeight(row, sigWeight=1.):
     weight = row['weight']
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
-    elif row['stage1cat'] > 0.01:
+    elif row['HTXSstage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
@@ -120,7 +120,7 @@ def altDiphoWeight(row, sigWeight=1./0.001297):
     weight = row['weight']
     if row['proc'].count('qcd'):
         weight *= 0.04 #downweight bc too few events
-    elif row['stage1cat'] > 0.01:
+    elif row['HTXSstage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
