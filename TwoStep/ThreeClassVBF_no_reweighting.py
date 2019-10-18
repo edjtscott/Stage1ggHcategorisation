@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import xgboost as xg
 import uproot as upr
-#import matplotlib
-#matplotlib.use('Agg')
-#import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import pickle
 import sklearn
 from sklearn.metrics import roc_auc_score, roc_curve
@@ -17,8 +17,8 @@ from otherHelpers import prettyHist, getAMS, computeBkg, getRealSigma
 from root_numpy import fill_hist
 import usefulStyle as useSty
 
-#from matplotlib import rc
-#from bayes_opt import BayesianOptimization
+from matplotlib import rc
+from bayes_opt import BayesianOptimization
 
 
 print 'imports done'
@@ -72,7 +72,7 @@ print 'variables chosen'
 
 #either get existing data frame or create it
 trainTotal = None
-if not opts.dataFrame: #if the dataframe option was not used while running, create dataframe from files in folder
+if not opts.dataFrame:#if the dataframe option was not used while running, create dataframe from files in folder
   trainFrames = {}
   #get the trees, turn them into arrays
   for proc,fn in procFileMap.iteritems():#proc, fn are the pairs 'proc':'fn' in the file map 
@@ -93,13 +93,6 @@ if not opts.dataFrame: #if the dataframe option was not used while running, crea
 #create one total frame
   trainList = []
   for proc in theProcs:
-      if proc.lower().count('data'):
-        trainFrameLow  = trainFrames[proc][trainFrames[proc].dipho_mass<120.]
-        trainFrameHigh = trainFrames[proc][trainFrames[proc].dipho_mass>130.]
-        tempTrainList = []
-        tempTrainList.append(trainFrameLow)
-        tempTrainList.append(trainFrameHigh)
-        trainFrames[proc] = pd.concat(tempTrainList)
       trainList.append(trainFrames[proc])
   trainTotal = pd.concat(trainList)
   del trainFrames
@@ -137,7 +130,7 @@ if not opts.dataFrame: #if the dataframe option was not used while running, crea
   gghSumW = np.sum(trainTotal[trainTotal.truthProcess==0]['weight'].values)#summing weights of ggh events
   vbfSumW = np.sum(trainTotal[trainTotal.truthProcess==1]['weight'].values)#summing weights of vbf events
   dataSumW = np.sum(trainTotal[trainTotal.truthProcess==2]['weight'].values)#summing weights of data events  
-
+  totalSumW = gghSumW+vbfSumW+dataSumW
 #getting number of events
   ggH_df = trainTotal[trainTotal.truthProcess==0]
   vbf_df = trainTotal[trainTotal.truthProcess==1]
@@ -150,21 +143,45 @@ if not opts.dataFrame: #if the dataframe option was not used while running, crea
   print 'data events'
   print data_df.shape[0]
 
-
+  print 'weights before lum adjustment'
   print 'gghSumW, vbfSumW, dataSumW, ratio_ggh_data, ratio_vbf_data = %.3f, %.3f, %.3f, %.3f,%.3f'%(gghSumW, vbfSumW,dataSumW, gghSumW/dataSumW, vbfSumW/dataSumW)
+  print 'ratios'
+  print 'ggh ratio, vbf ratio, bkg ratio = %.3f, %.3f, %.3f'%(gghSumW/totalSumW, vbfSumW/totalSumW, dataSumW/totalSumW)
 
 
   trainTotal['ProcessWeight'] = trainTotal.apply(ProcessWeight, axis=1, args=[dataSumW/gghSumW,dataSumW/vbfSumW])#multiply each of the VH weight values by sum of nonsig weight/sum of sig weight 
 
+#applying lum factors for ggh and vbf for training without equalised weights
+  def weight_adjust (row):
+      if row['truthProcess'] == 0:
+         return 41500. * row['weight']
+      if row['truthProcess'] == 1:
+         return 41500. * row['weight']
+      if row['truthProcess'] == 2:
+         return 1000. * row ['weight']
+
+  trainTotal['weightLUM'] = trainTotal.apply(weight_adjust, axis=1)
+
+
+  gghSumW = np.sum(trainTotal[trainTotal.truthProcess==0]['weightLUM'].values)#summing weights of ggh events
+  vbfSumW = np.sum(trainTotal[trainTotal.truthProcess==1]['weightLUM'].values)#summing weights of vbf events
+  dataSumW = np.sum(trainTotal[trainTotal.truthProcess==2]['weightLUM'].values)#summing weights of data events
+  totalSumW = gghSumW+vbfSumW+dataSumW
+
+  print 'weights after lum adjustment'
+  print 'gghSumW, vbfSumW, dataSumW, ratio_ggh_data, ratio_vbf_data = %.3f, %.3f, %.3f, %.3f,%.3f'%(gghSumW, vbfSumW,dataSumW,gghSumW/dataSumW, vbfSumW/dataSumW)
+  print 'ggh ratio, vbf ratio, bkg ratio = %.3f, %.3f, %.3f'%(gghSumW/totalSumW, vbfSumW/totalSumW, dataSumW/totalSumW)
+
+
 #trainTotal = trainTotal[trainTotal.truthVhHad>-0.5]
-  trainTotal['weightLUM'] = trainTotal.apply(lumiadjust, axis=1, args=[41.5])
+
   print 'done weight equalisation'
 
 #save as a pickle file
-  if not path.isdir(frameDir): 
-    system('mkdir -p %s'%frameDir)
-    trainTotal.to_pickle('%s/ThreeClassTotal.pkl'%frameDir)
-    print 'frame saved as %s/ThreeClassTotal.pkl'%frameDir
+#if not path.isdir(frameDir): 
+  system('mkdir -p %s'%frameDir)
+  trainTotal.to_pickle('%s/ThreeClassTotal.pkl'%frameDir)
+  print 'frame saved as %s/ThreeClassTotal.pkl'%frameDir
 
 #read in dataframe if above steps done before
 #else:
@@ -172,7 +189,7 @@ if not opts.dataFrame: #if the dataframe option was not used while running, crea
 #print 'Successfully loaded the dataframe'
 
 #set up train set and randomise the inputs
-trainFrac = 0.7
+trainFrac = 0.9
 
 
 theShape = trainTotal.shape[0]#number of rows in total dataframe
@@ -186,9 +203,7 @@ trainLimit = int(theShape*trainFrac)
 #BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho']
 
 
-#BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dipho_leadR9','dipho_subleadR9','dijet_dipho_dphi_trunc','dijet_dipho_pt','dijet_mva','dipho_dijet_MVA','dijet_jet1_RMS','dijet_jet2_RMS','dipho_lead_hoe','dipho_sublead_hoe','dipho_lead_elveto','dipho_sublead_elveto','jet1_HFHadronEnergyFraction','jet1_HFEMEnergyFraction', 'jet2_HFHadronEnergyFraction','jet2_HFEMEnergyFraction']
-
-BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','cos_dijet_dipho_dphi','dijet_centrality_gg','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dijet_dipho_dphi_trunc']
+BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dipho_leadR9','dipho_subleadR9','dijet_dipho_dphi_trunc','dijet_dipho_pt','dijet_mva','dipho_dijet_MVA','dijet_jet1_RMS','dijet_jet2_RMS','dipho_lead_hoe','dipho_sublead_hoe','dipho_lead_elveto','dipho_sublead_elveto','jet1_HFHadronEnergyFraction','jet1_HFEMEnergyFraction', 'jet2_HFHadronEnergyFraction','jet2_HFEMEnergyFraction']
 
 
 BDTX  = trainTotal[BDTVars].values# the train input variables defined in the above list
@@ -214,7 +229,7 @@ BDTTrainM,  BDTTestM  = np.split( BDTM,  [trainLimit] )
 
 
 #set up the training and testing matrices
-trainMatrix = xg.DMatrix(BDTTrainX, label=BDTTrainY, weight=BDTTrainTW, feature_names=BDTVars)
+trainMatrix = xg.DMatrix(BDTTrainX, label=BDTTrainY, weight=BDTTrainFW, feature_names=BDTVars)
 testMatrix  = xg.DMatrix(BDTTestX, label=BDTTestY, weight=BDTTestFW, feature_names=BDTVars)
 
 
@@ -228,6 +243,17 @@ trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 
 
 #playing with parameters
+trainParams['eta']=0.1
+trainParams['max_depth']=10
+trainParams['subsample']=1
+trainParams['colsample_bytree']=1
+trainParams['min_child_weight']=0
+trainParams['gamma']=0
+trainParams['eval_metric']='merror'
+
+trainParams['seed'] = 123456
+#trainParams['reg_alpha']=
+#trainParams['reg_lambda']=
 
 #add any specified training parameters
 paramExt = ''
@@ -241,11 +267,11 @@ if opts.trainParams:
   paramExt = paramExt[:-2]
 
 progress = dict()
-#watchlist  = [(trainMatrix,'train'), (testMatrix, 'eval')]
+watchlist  = [(trainMatrix,'train'), (testMatrix, 'eval')]
 
 #train the BDT (specify number of epochs here)
 print 'about to train BDT'
-ThreeClassModel = xg.train(trainParams, trainMatrix,60,watchlist)
+ThreeClassModel = xg.train(trainParams, trainMatrix,8,watchlist)
 print 'done'
 print progress
 
@@ -286,38 +312,178 @@ print 'labels'
 BDTPredClassTrain = np.argmax(BDTPredYtrain,axis=1)
 BDTPredClassTest = np.argmax(BDTPredYtest,axis=1)
 
+
+################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --trainset--vbf prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==2)],bins=50,weights=BDTTrainFW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_train_vbf_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_train_vbf_prob.pdf',bbox_inches = 'tight')
+###########################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --testset--vbf prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtest[:,1])[(BDTTestY==2)],weights=BDTTestFW[(BDTTestY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtest[:,1])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtest[:,1])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_test_vbf_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_test_vbf_prob.pdf',bbox_inches = 'tight')
+################################################################################
+################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --trainset--ggh prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==2)],bins=50,weights=BDTTrainFW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_train_ggh_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_train_ggh_prob.pdf',bbox_inches = 'tight')
+###########################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --testset-- ggh prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==2)],weights=BDTTestFW[(BDTTestY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_test_ggh_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_test_ggh_prob.pdf',bbox_inches = 'tight')
+################################################################################
+
+
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --trainset--bkg prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtrain[:,2])[(BDTTrainY==2)],bins=50,weights=BDTTrainFW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtrain[:,2])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtrain[:,2])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_train_bkg_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_train_bkg_prob.pdf',bbox_inches = 'tight')
+###########################################################################
+print 'making MVA prob score plot for all'
+plt.figure()
+plt.title('MVA prob plot --testset-- bkg prob')
+#plt.bins([0,1,2,3])
+
+plt.hist((BDTPredYtest[:,2])[(BDTTestY==2)],weights=BDTTestFW[(BDTTestY==2)], histtype='step',normed=1, color='blue',label='bkg')
+plt.hist((BDTPredYtest[:,2])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh')
+plt.hist((BDTPredYtest[:,2])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf')
+
+plt.xlabel('BDT probabilities')
+
+plt.legend()
+plt.savefig('Three_MVA_prob_test_bkg_prob.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_prob_test_bkg_prob.pdf',bbox_inches = 'tight')
+################################################################################
+
+print 'checking yields based on vbf probabilities for different probability cut values'
+
+cutVal_list = [0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6]
+testScale = 1./(1.-trainFrac)
+for cutVal in cutVal_list:#BDT boundaries--we are using 3 VH tag categories?
+  selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * ((BDTPredYtest[:,1])>cutVal) )
+  selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * ((BDTPredYtest[:,1])>cutVal) )
+  selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * ((BDTPredYtest[:,1])>cutVal) )
+
+  selectedtotal = selectedvbf+selectedggh+selectedbkg 
+  print 'Selected events for a cut value of %.2f: vbf %.3f, ggh %.3f, bkg %.3f'%(cutVal, selectedvbf, selectedggh, selectedbkg)
+  print 'fractions for a cut value of %.2f: vbf %.3f, ggh %.3f, bkg %.3f'%(cutVal,selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal) 
+
+print 'checking the yields based on argmax-vbf class'
+selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==1))
+selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==1))
+selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * (BDTPredClassTest==1))
+
+selectedtotal = selectedvbf+selectedggh+selectedbkg
+print 'Selected events with argmax: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf, selectedggh, selectedbkg)
+print 'fractions for argmax selection: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal)
+
+print 'checking the yields based on argmax-ggh class'
+selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==0))
+selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==0))
+selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * (BDTPredClassTest==0))
+
+selectedtotal = selectedvbf+selectedggh+selectedbkg
+print 'Selected events with argmax: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf, selectedggh, selectedbkg)
+print 'fractions for argmax selection: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal)
+
+
+print 'checking the yields based on argmax-bkg class'
+selectedvbf = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==2))
+selectedggh = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==2))
+selectedbkg = opts.intLumi * testScale * np.sum( BDTTestFW * (BDTTestY==2) * (BDTPredClassTest==2))
+
+selectedtotal = selectedvbf+selectedggh+selectedbkg
+print 'Selected events with argmax: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf, selectedggh, selectedbkg)
+print 'fractions for argmax selection: vbf %.3f, ggh %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedggh/selectedtotal, selectedbkg/selectedtotal)
+
+
+
+###############################################################################
+
 #SCORE PLOT
-<<<<<<< HEAD
-#print 'making MVA score plot'
-#plt.figure()
-#plt.title('MVA score plot --trainset')
-##plt.bins([0,1,2,3])
-#plt.hist(BDTPredClassTrain[(BDTTrainY==0)],bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
-#
-#plt.hist(BDTPredClassTrain[(BDTTrainY==1)],bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
-#plt.hist(BDTPredClassTrain[(BDTTrainY==2)], bins=[0,1,2,3], weights=BDTTrainTW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
-#
-#plt.xlabel('BDT class')
-#
-#plt.legend()
-#plt.savefig('Three_MVA_score_train.png',bbox_inches = 'tight')
-#plt.savefig('Three_MVA_score_train.pdf',bbox_inches = 'tight')
-#
-#
-#plt.figure()
-#plt.title('MVA score plot --testset')
-##plt.bins([0,1,2,3])
-#plt.hist(BDTPredClassTest[(BDTTestY==0)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==0)],  histtype='step',normed=1, color='red',label='ggh')
-#plt.hist(BDTPredClassTest[(BDTTestY==1)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==1)],  histtype='step',normed=1, color='green',label='vbf')
-#plt.hist(BDTPredClassTest[(BDTTestY==2)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==2)],  histtype='step',normed=1, color='blue',label='bkg')
-#
-#
-#plt.xlabel('BDT score')
-#plt.legend()
-#plt.savefig('Three_MVA_score_test.png',bbox_inches = 'tight')
-#plt.savefig('Three_MVA_score_test.pdf',bbox_inches = 'tight')
-#
-#print 'DONE'
+print 'making MVA score plot'
+plt.figure()
+plt.title('MVA score plot --trainset')
+#plt.bins([0,1,2,3])
+plt.hist(BDTPredClassTrain[(BDTTrainY==0)],bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
+
+plt.hist(BDTPredClassTrain[(BDTTrainY==1)],bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
+plt.hist(BDTPredClassTrain[(BDTTrainY==2)], bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==2)], histtype='step',normed=1, color='blue',label='bkg')
+
+plt.xlabel('BDT class')
+
+plt.legend()
+plt.savefig('Three_MVA_score_train.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_score_train.pdf',bbox_inches = 'tight')
+
+
+plt.figure()
+plt.title('MVA score plot --testset')
+#plt.bins([0,1,2,3])
+plt.hist(BDTPredClassTest[(BDTTestY==0)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==0)],  histtype='step',normed=1, color='red',label='ggh')
+plt.hist(BDTPredClassTest[(BDTTestY==1)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==1)],  histtype='step',normed=1, color='green',label='vbf')
+plt.hist(BDTPredClassTest[(BDTTestY==2)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==2)],  histtype='step',normed=1, color='blue',label='bkg')
+
+
+plt.xlabel('BDT score')
+plt.legend()
+plt.savefig('Three_MVA_score_test.png',bbox_inches = 'tight')
+plt.savefig('Three_MVA_score_test.pdf',bbox_inches = 'tight')
+
+print 'DONE'
 
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 
@@ -336,19 +502,19 @@ fpr, tpr, thresholds= roc_curve(BDTTrainY_ggh_roc, BDTPredYtrain[:,0], pos_label
 #fpr, tpr, thresholds = roc_curve(BDTTrainY, BDTPredYtrain, pos_label=0)
 #roc_auc=auc(fpr,tpr)
 print 'loaded train roc curve'
-#plt.figure()
-#plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train (area =%0.2f )'%roc_auc_train_ggh)
-##plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train' )
+plt.figure()
+plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train (area =%0.2f )'%roc_auc_train_ggh)
+#plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train' )
 fpr, tpr, thresholds = roc_curve(BDTTestY_ggh_roc, BDTPredYtest[:,0], pos_label=0,sample_weight = BDTTestFW)
 #roc_auc=auc(fpr,tpr)
 print 'loaded test roc curve'
 
-#plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test (area =%0.2f )'%roc_auc_test_ggh)
-##plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test')
-#plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Luck', zorder=5)
-#plt.legend()
-#plt.savefig('ROC_ggh.png',bbox_inches = 'tight')
-#plt.savefig('ROC_ggh.pdf',bbox_inches = 'tight')
+plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test (area =%0.2f )'%roc_auc_test_ggh)
+#plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test')
+plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Luck', zorder=5)
+plt.legend()
+plt.savefig('ROC_ggh.png',bbox_inches = 'tight')
+plt.savefig('ROC_ggh.pdf',bbox_inches = 'tight')
 
 
 #plot roc curves
@@ -361,8 +527,6 @@ print 'area under roc curve for test set_vbf     = %1.5f'%(roc_auc_score(BDTTest
 
 roc_auc_train_vbf = roc_auc_score(BDTTrainY_vbf_roc, BDTPredYtrain[:,1], sample_weight = BDTTrainFW)
 roc_auc_test_vbf = roc_auc_score(BDTTestY_vbf_roc, BDTPredYtest[:,1], sample_weight = BDTTestFW) 
-
-exit("ED FIXME exit before plotting")
 
 
 fpr, tpr, thresholds = roc_curve(BDTTrainY_vbf_roc, BDTPredYtrain[:,1], pos_label=1,sample_weight = BDTTrainFW)

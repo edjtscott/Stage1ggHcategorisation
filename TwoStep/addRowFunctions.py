@@ -2,18 +2,27 @@ def addPt(row):
     return row['CMS_hgg_mass']*row['diphoptom']
 
 def truthDipho(row):
-    if not row['stage1cat']==0: return 1
+    if not row['HTXSstage1cat']==0: return 1
     else: return 0
 
+#def truthVhHad(row):
+#    if row['tempStage1bin']==203: return 1
+#    elif row['tempStage1bin']>107 and row['tempStage1bin']<111:return 0
+#   else:return -1
+
 def truthVhHad(row):
-    if row['tempStage1bin']==203: return 1
-    elif row['tempStage1bin']>107 and row['tempStage1bin']<111:return 0
-    else:return -1
+    if row['proc']=='vh':return 1
+    elif row['proc']=='vbf':return 1
+    else: return 0
 
 def truthProcess(row):
     if row['proc']=='ggh': return 0
     elif row['proc']=='vbf': return 1
     else:return 2
+def truthProcessTwoClass(row):
+    #if row['proc']=='ggh': return 0
+    if row['proc']=='vbf': return 1
+    else:return 0
 
 
 def vhHadWeight(row, ratio):
@@ -23,12 +32,23 @@ def vhHadWeight(row, ratio):
     else: return weight
 
 def ProcessWeight(row,ratio1, ratio2):
-    weight =1000. * abs(row['weight'])
+    weight =abs(row['weightR'])
     if row['truthProcess']==0:
        return ratio1 * weight
     elif row['truthProcess']==1:
        return ratio2 * weight
     else: return weight 
+
+def ProcessWeightTwoClass(row,ratio1):
+    weight =abs(row['weightR'])
+    if row['truthProcess']==1:
+       return ratio1 * weight
+    #elif row['truthProcess']==1:
+       #return ratio2 * weight
+    else: return weight
+
+
+
 
 
 def truthClass(row):
@@ -58,7 +78,7 @@ def diphoWeight(row, sigWeight=1.):
     weight = row['weight']
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
-    elif row['stage1cat'] > 0.01:
+    elif row['HTXSstage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
@@ -100,7 +120,7 @@ def altDiphoWeight(row, sigWeight=1./0.001297):
     weight = row['weight']
     if row['proc'].count('qcd'):
         weight *= 0.04 #downweight bc too few events
-    elif row['stage1cat'] > 0.01:
+    elif row['HTXSstage1cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:

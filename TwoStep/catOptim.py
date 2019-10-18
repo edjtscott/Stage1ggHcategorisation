@@ -26,8 +26,8 @@ class Bests:
       bkg = bkgs[i] 
       non = nons[i] 
       signif = self.getAMS(sig, bkg+non)
-      #signif = self.getAMS(sig, bkg+(2.*non)) #FIXME trying to give stronger penalty to ggH term
-      #signif = self.getAMS(sig, bkg+(non*non)) #FIXME trying to give stronger penalty to ggH term
+      #signif = self.getAMS(sig, bkg+(2.*non)) ## experimental higher penalty for ggH
+      #signif = self.getAMS(sig, bkg+(non*non)) ## experimental higher penalty for ggH
       signifs.append(signif)
       totSignifSq += signif*signif
     totSignif = np.sqrt( totSignifSq )
@@ -96,6 +96,7 @@ class CatOptim:
     self.sortOthers    = False
     self.addNonSig     = False
     self.transform     = False
+    self.constantBkg   = False
     assert len(bkgDiscrims) == len(sigDiscrims)
     assert len(ranges)      == len(sigDiscrims)
     assert len(names)       == len(sigDiscrims)
@@ -128,6 +129,9 @@ class CatOptim:
   def doTransform( self, arr ):
     arr = 1. / ( 1. + np.exp( 0.5*np.log( 2./(arr+1.) - 1. ) ) )
     return arr
+
+  def setConstantBkg( self, val ):
+    self.constantBkg = val
 
   def optimise(self, lumi, nIters):
     '''Run the optimisation for a given number of iterations'''
@@ -264,11 +268,14 @@ class CatOptim:
   
   def computeBkg( self, hist, effSigma ):
     bkgVal = 9999.
-    #if hist.GetEntries() > 0 and hist.Integral()>0.000001:
-    if hist.GetEffectiveEntries() > 10 and hist.Integral()>0.000001:
-      hist.Fit('expo')
-      fit = hist.GetFunction('expo')
-      bkgVal = fit.Integral(125. - effSigma, 125. + effSigma)
+    if hist.GetEntries() > 10 and hist.Integral()>0.000001:
+      if self.constBkg:
+        totalBkg = hist.Integral( hist.FindBin(100.1), hist.FindBin(119.9) ) + hist.Integral( hist.FindBin(130.1), hist.FindBin(179.9) )
+        bkgVal = (totalBkg/70.) * 2. * effSigma
+      else:
+        hist.Fit('expo')
+        fit = hist.GetFunction('expo')
+        bkgVal = fit.Integral(125. - effSigma, 125. + effSigma)
     return bkgVal
 
   def getAMS(self, s, b, breg=3.):
@@ -279,4 +286,3 @@ class CatOptim:
       val = 2*(val - s)
       val = np.sqrt(val)
     return val
-

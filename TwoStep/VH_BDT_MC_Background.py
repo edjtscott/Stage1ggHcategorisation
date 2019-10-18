@@ -45,51 +45,51 @@ frameDir = trainDir.replace('trees','frames')
 if opts.trainParams: opts.trainParams = opts.trainParams.split(',')#separate train options based on comma (used to define parameter pairs)
 
 #get trees from files, put them in data frames
-procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}# a dictionary with file names
+procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root', 'Dipho':'Dipho.root','GJet':'GJet.root','QCD':'QCD.root'}# a dictionary with file names
 theProcs = procFileMap.keys()# list of keys i.e 'ggh','vbf','vh'
 
-allVars = ['dipho_leadIDMVA','dipho_subleadIDMVA','dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar', 'dipho_cosphi', 'vtxprob','sigmarv','sigmawv','weight', 'tempStage1bin','dipho_mass','dipho_leadEta','dipho_subleadEta','cos_dijet_dipho_dphi','dijet_Zep','dijet_jet1_QGL','dijet_jet2_QGL','dijet_minDRJetPho']
+allVars = ['dipho_leadIDMVA','dipho_subleadIDMVA','dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar', 'dipho_cosphi', 'vtxprob','sigmarv','sigmawv','weight','dipho_mass','dipho_leadEta','dipho_subleadEta','cos_dijet_dipho_dphi','dijet_Zep','dijet_jet1_QGL','dijet_jet2_QGL','dijet_minDRJetPho']
 
 
 ###____adding data file for the HIG 16 040 comparison________
-dataFileMap = {'Data':'Data.root'}
-dataTotal = None
-if not opts.dataFrame:
-  dataFrames = {}
+#dataFileMap = {'Data':'Data.root'}
+#dataTotal = None
+#if not opts.dataFrame:
+  #dataFrames = {}
   #get the trees, turn them into arrays
-  for proc,fn in dataFileMap.iteritems():
-    dataFile = upr.open('%s/%s'%(trainDir,fn))
-    dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_VBFDiJet'%proc]
-    dataFrames[proc] = dataTree.pandas.df(allVars)
-    dataFrames[proc]['proc'] = proc
-  print 'got trees for normal background'
+  #for proc,fn in dataFileMap.iteritems():
+    #dataFile = upr.open('%s/%s'%(trainDir,fn))
+    #dataTree = dataFile['vbfTagDumper/trees/Data_13TeV_GeneralDipho']
+    #dataFrames[proc] = dataTree.pandas.df(allVars)
+    #dataFrames[proc]['proc'] = proc
+  #print 'got trees for normal background'
 
-  dataTotal = dataFrames['Data']
+  #dataTotal = dataFrames['Data']
 
-  dataTotal = dataTotal[dataTotal.dipho_mass>100.]
-  dataTotal = dataTotal[dataTotal.dipho_mass<180.]
+  #dataTotal = dataTotal[dataTotal.dipho_mass>100.]
+  #dataTotal = dataTotal[dataTotal.dipho_mass<180.]
 
-  dataTotal = dataTotal[dataTotal.dipho_leadIDMVA>-0.9]
-  dataTotal = dataTotal[dataTotal.dipho_subleadIDMVA>-0.9]
-  dataTotal = dataTotal[dataTotal.dijet_Mjj>60.]
-  dataTotal = dataTotal[dataTotal.dijet_Mjj<120.]
+  #dataTotal = dataTotal[dataTotal.dipho_leadIDMVA>-0.9]
+  #dataTotal = dataTotal[dataTotal.dipho_subleadIDMVA>-0.9]
+  #dataTotal = dataTotal[dataTotal.dijet_Mjj>60.]
+  #dataTotal = dataTotal[dataTotal.dijet_Mjj<120.]
 
-  dataTotal = dataTotal[dataTotal.dipho_lead_ptoM>0.5]
-  dataTotal = dataTotal[dataTotal.dipho_sublead_ptoM>0.25]
-  dataTotal = dataTotal[dataTotal.dipho_mva>0.79]
-  dataTotal = dataTotal[dataTotal.dijet_nj>1]
-  dataTotal = dataTotal[dataTotal.dijet_LeadJPt>40]
-  dataTotal = dataTotal[dataTotal.dijet_SubJPt>40]
-  dataTotal = dataTotal[dataTotal.dijet_leadEta<2.4]
-  dataTotal = dataTotal[dataTotal.dijet_subleadEta<2.4]
-  dataTotal = dataTotal[dataTotal.dijet_minDRJetPho>0.4]
-  dataTotal = dataTotal[dataTotal.cosThetaStar<0.5]
+  #dataTotal = dataTotal[dataTotal.dipho_lead_ptoM>0.5]
+  #dataTotal = dataTotal[dataTotal.dipho_sublead_ptoM>0.25]
+  #dataTotal = dataTotal[dataTotal.dipho_mva>0.79]
+  #dataTotal = dataTotal[dataTotal.dijet_nj>1]
+  #dataTotal = dataTotal[dataTotal.dijet_LeadJPt>40]
+  ##dataTotal = dataTotal[dataTotal.dijet_SubJPt>40]
+  #dataTotal = dataTotal[dataTotal.dijet_leadEta<2.4]
+  #dataTotal = dataTotal[dataTotal.dijet_subleadEta<2.4]
+  #dataTotal = dataTotal[dataTotal.dijet_minDRJetPho>0.4]
+  #dataTotal = dataTotal[dataTotal.cosThetaStar<0.5]
 
 #_______________________________________________
 
 
 
-allVars = ['dipho_leadIDMVA','dipho_subleadIDMVA','dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar', 'dipho_cosphi', 'vtxprob','sigmarv','sigmawv','weight', 'tempStage1bin','dipho_mass','dipho_leadEta','dipho_subleadEta','cos_dijet_dipho_dphi','dijet_Zep','dijet_jet1_QGL','dijet_jet2_QGL','dijet_minDRJetPho']
+allVars = ['dipho_leadIDMVA','dipho_subleadIDMVA','dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar', 'dipho_cosphi', 'vtxprob','sigmarv','sigmawv','weight', 'dipho_mass','dipho_leadEta','dipho_subleadEta','cos_dijet_dipho_dphi','dijet_Zep','dijet_jet1_QGL','dijet_jet2_QGL','dijet_minDRJetPho']
 
 
 #either get existing data frame or create it
@@ -102,7 +102,19 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
       trainFile   = upr.open('%s/%s'%(trainDir,fn))
   #is a reader and a writer of the ROOT file format using only Python and Numpy.
   #Unlike PyROOT and root_numpy, uproot does not depend on C++ ROOT. Instead, it uses Numpy to cast blocks of data from the ROOT file as Numpy arrays.
-      trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_VBFDiJet'%proc]
+      if (proc=='Dipho'):
+         trainTree = trainFile['vbfTagDumper/trees/dipho_13TeV_GeneralDipho']
+      elif (proc=='GJet'):
+         trainTree = trainFile['vbfTagDumper/trees/gjet_anyfake_13TeV_GeneralDipho']
+      elif (proc=='QCD'):
+         trainTree = trainFile['vbfTagDumper/trees/qcd_anyfake_13TeV_GeneralDipho']
+      elif (proc=='ggh'):
+         trainTree = trainFile['vbfTagDumper/trees/ggh_125_13TeV_GeneralDipho']
+      elif (proc=='vbf'):
+         trainTree = trainFile['vbfTagDumper/trees/vbf_125_13TeV_GeneralDipho']
+      else:
+         trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_VBFDiJet'%proc]
+      #trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_VBFDiJet'%proc]
       trainFrames[proc] = trainTree.pandas.df(allVars)
       trainFrames[proc]['proc'] = proc #adding a column for the process
   print 'got trees'
@@ -166,52 +178,52 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
 
   #____INTEGRATING BACKGROUND UNDER THE PEAK_____
   print 'finding background under peak'
-  bkgHist = r.TH1F('bkgHistTemp','bkgHistTemp',160,100,180)
-  fill_hist(bkgHist, dataTotal['dipho_mass'].values, weights=dataTotal['weight'].values)
+  #bkgHist = r.TH1F('bkgHistTemp','bkgHistTemp',160,100,180)
+  #fill_hist(bkgHist, dataTotal['dipho_mass'].values, weights=dataTotal['weight'].values)
    
-  sigHist = r.TH1F('sigHistTemp', 'sigHistTemp', 160,100,180)
-  fill_hist(sigHist, df_HIG['dipho_mass'].values, weights = df_HIG['weight'].values)
+  #sigHist = r.TH1F('sigHistTemp', 'sigHistTemp', 160,100,180)
+  #fill_hist(sigHist, df_HIG['dipho_mass'].values, weights = df_HIG['weight'].values)
 
 
-  print 'data weights'
-  print dataTotal['weight'].values
-  print 'getting effective sigma'
+  #print 'data weights'
+  #print dataTotal['weight'].values
+  #print 'getting effective sigma'
  # from catOptim import getRealSigma
-  def getRealSigma(hist):
-    sigma = 2.
-    if hist.GetEntries() > 0 and hist.Integral()>0.000001:
-      hist.Fit('gaus')
-      fit = hist.GetFunction('gaus')
-      sigma = fit.GetParameter(2)
-    return sigma
+  #def getRealSigma(hist):
+   # sigma = 2.
+    #if hist.GetEntries() > 0 and hist.Integral()>0.000001:
+     # hist.Fit('gaus')
+      #fit = hist.GetFunction('gaus')
+      #sigma = fit.GetParameter(2)
+    #return sigma
 
-  effective_sigma = getRealSigma(sigHist)
-  print 'effective sigma is'
-  print effective_sigma
+  #effective_sigma = getRealSigma(sigHist)
+  #print 'effective sigma is'
+  #print effective_sigma
 
   #from catOptim import computeBkg
-  def computeBkg(hist, effSigma ):
-    bkgVal = 9999.
+  #def computeBkg(hist, effSigma ):
+    #bkgVal = 9999.
     #if hist.GetEntries() > 0 and hist.Integral()>0.000001:
-    if hist.GetEffectiveEntries() > 10 and hist.Integral()>0.000001:
-      hist.Fit('expo')
-      fit = hist.GetFunction('expo')
-      bkgVal = fit.Integral(125. - effSigma, 125. + effSigma)
-    return bkgVal
+    #if hist.GetEffectiveEntries() > 10 and hist.Integral()>0.000001:
+      #hist.Fit('expo')
+      #fit = hist.GetFunction('expo')
+      #bkgVal = fit.Integral(125. - effSigma, 125. + effSigma)
+    #return bkgVal
   
-  background_under_peak = computeBkg(bkgHist,effective_sigma)
-  print 'background under peak is'
-  print background_under_peak  
+  #background_under_peak = computeBkg(bkgHist,effective_sigma)
+  #print 'background under peak is'
+  #print background_under_peak  
   
   #background_weight = np.sum(dataTotal['weight'].values) 
-  background_weight = background_under_peak
-  berr =3
-  term_a = (signal_weight*41.5)+background_weight+berr
-  term_b = (1+np.true_divide(signal_weight*41.5,background_weight+berr))
-  c_bin = np.sqrt(2*(term_a*np.log(term_b)-signal_weight*41.5))
+  #background_weight = background_under_peak
+  #berr =3
+  #term_a = (signal_weight*41.5)+background_weight+berr
+  #term_b = (1+np.true_divide(signal_weight*41.5,background_weight+berr))
+  #c_bin = np.sqrt(2*(term_a*np.log(term_b)-signal_weight*41.5))
 
-  print 'the significance by applying HIG 16 040 cuts is'
-  print c_bin
+  #print 'the significance by applying HIG 16 040 cuts is'
+  #print c_bin
 
 #____________________________________________________________________________________________
 
@@ -223,12 +235,18 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   trainTotal['dijet_dipho_dEta']=((trainTotal.dijet_leadEta+trainTotal.dijet_subleadEta)/2)-((trainTotal.dipho_leadEta+trainTotal.dipho_subleadEta)/2)
   trainTotal['dijet_centrality_gg']=np.exp(-4*(trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2)
   print 'calculated variables added'
+  def adjust_qcd_weight(row):
+      if row['proc']=='QCD':
+         return row['weight']/25
+      else:
+         return row['weight']
 
+  trainTotal['weightR'] = trainTotal.apply(adjust_qcd_weight, axis=1)
 
 #add the target variable and the equalised weight
   trainTotal['truthVhHad'] = trainTotal.apply(truthVhHad,axis=1)#the truthVhHad function returns 1 if the gen HTXS stage 0 category of the event id VH hadronic
-  sigSumW = np.sum(trainTotal[trainTotal.truthVhHad==1]['weight'].values)#summing weights of vh hadronic events (selected by gen HTXS category)
-  bkgSumW = np.sum(trainTotal[trainTotal.truthVhHad==0]['weight'].values)#summing weights of non-vh hadronic events (selected by gen HTXS stage 0 category
+  sigSumW = np.sum(trainTotal[trainTotal.truthVhHad==1]['weightR'].values)#summing weights of vh hadronic events (selected by gen HTXS category)
+  bkgSumW = np.sum(trainTotal[trainTotal.truthVhHad==0]['weightR'].values)#summing weights of non-vh hadronic events (selected by gen HTXS stage 0 category
   print 'sigSumW, bkgSumW, ratio = %.3f, %.3f, %.3f'%(sigSumW, bkgSumW, sigSumW/bkgSumW)
 
   trainTotal['vhHadWeight'] = trainTotal.apply(vhHadWeight, axis=1, args=[bkgSumW/sigSumW])#multiply each of the VH weight values by sum of VH weight/sum of non vh weight -- to check
@@ -266,7 +284,7 @@ vhHadVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta',
 vhHadX  = trainTotal[vhHadVars].values# the train input variables defined in the above list
 vhHadY  = trainTotal['truthVhHad'].values#the training target two classes 1 for vh had 0 for other processes 
 vhHadTW = trainTotal['vhHadWeight'].values
-vhHadFW = trainTotal['weight'].values
+vhHadFW = trainTotal['weightR'].values
 vhHadM  = trainTotal['dipho_mass'].values
 
 
@@ -474,6 +492,11 @@ df_ggh = trainTotal[trainTotal['proc']=='ggh']
 df_VBF = trainTotal[trainTotal['proc']=='vbf']
 df_VH = trainTotal[trainTotal['proc']=='vh']
 df_EWqqH = trainTotal[(trainTotal['proc']=='vbf')|(trainTotal['proc']=='vh')]
+df_dipho = trainTotal[(trainTotal['proc']=='Dipho')]
+df_gjet = trainTotal[(trainTotal['proc']=='GJet')]
+df_qcd = trainTotal[(trainTotal['proc']=='QCD')]
+
+
 
 print 'ggh sum weight'
 print np.sum(df_ggh['weight'].values)
@@ -482,6 +505,9 @@ numpy_ggh_weight = df_ggh['weight'].values
 numpy_VBF_weight = df_VBF['weight'].values
 numpy_VH_weight = df_VH['weight'].values
 numpy_EWqqH_weight = df_EWqqH['weight'].values
+numpy_dipho_weight = df_dipho['weight'].values
+numpy_gjet_weight = df_gjet['weight'].values
+numpy_qcd_weight = df_qcd['weight'].values
 
 
 #defining plot function
@@ -493,6 +519,9 @@ def plot_variable(var='cosThetaStar', var_label = '$\cos\,\theta^*$', setrange=(
   numpy_VBF = df_VBF[var].values
   numpy_VH = df_VH[var].values
   numpy_EWqqH = df_EWqqH[var].values
+  numpy_dipho = df_dipho[var].values
+  numpy_gjet = df_gjet[var].values
+  numpy_qcd = df_qcd[var].values
 
   plt.figure(figsize=(6,6))
   plt.rc('text', usetex=True)
@@ -503,12 +532,21 @@ def plot_variable(var='cosThetaStar', var_label = '$\cos\,\theta^*$', setrange=(
   if (plot_type=='EW qqH vs ggH'):
       plt.hist(numpy_ggh, bins=50,weights=numpy_ggh_weight,histtype='step', normed=1, color = 'green',range=setrange, label = 'ggh',linewidth=2.0)
       plt.hist(numpy_EWqqH, bins=50,weights=numpy_EWqqH_weight,histtype='step', normed=1, color = 'red',range=setrange, label = 'VH',linewidth=2.0)
-
+      
 
   if (plot_type=='separate VH and VBF'): 
      plt.hist(numpy_ggh, bins=50,weights=numpy_ggh_weight,histtype='step', normed=1, color = 'green',range=setrange, label = 'ggh',linewidth=2.0)
      plt.hist(numpy_VBF, bins=50,weights=numpy_VBF_weight,histtype='step', normed=1, color = 'blue', range=setrange, label = 'vbf',linewidth=2.0)
      plt.hist(numpy_VH, bins=50,weights=numpy_VH_weight,histtype='step', normed=1, color = 'red', range=setrange,label = 'vh',linewidth=2.0)
+
+  if (plot_type=='EWqqH vs ggH vs SM-sep'):
+      plt.hist(numpy_ggh, bins=50,weights=numpy_ggh_weight,histtype='step', normed=1, color = 'green',range=setrange, label = 'ggh',linewidth=2.0)
+      plt.hist(numpy_EWqqH, bins=50,weights=numpy_EWqqH_weight,histtype='step', normed=1, color = 'red',range=setrange, label = 'VH',linewidth=2.0)
+      plt.hist(numpy_dipho, bins=50,weights=numpy_dipho_weight,histtype='step', normed=1, color = 'blue',range=setrange, label = 'dipho',linewidth=2.0)
+      plt.hist(numpy_gjet, bins=50,weights=numpy_gjet_weight,histtype='step', normed=1, color = 'orange',range=setrange, label = 'gjet',linewidth=2.0)
+      plt.hist(numpy_qcd, bins=50,weights=numpy_qcd_weight,histtype='step', normed=1, color = 'magenta',range=setrange, label = 'qcd',linewidth=2.0)
+
+
 
   plt.legend(loc='best')
   plt.xlabel(var_label)
@@ -522,7 +560,7 @@ var_list = range(0,len(plotVars))
 
 print 'plotting relevant variables'
 for i in var_list:
-  plot_variable(var=plotVars[i], var_label =plotVarsX[i], setrange=plotVarsR[i], plot_type = 'EW qqH vs ggH')
+  plot_variable(var=plotVars[i], var_label =plotVarsX[i], setrange=plotVarsR[i], plot_type = 'EWqqH vs ggH vs SM-sep')
 
 print 'all plots created'
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
