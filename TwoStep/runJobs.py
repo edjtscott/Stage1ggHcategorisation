@@ -10,7 +10,9 @@ runLocal = False
 
 myDir = getcwd()
 #baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
-baseDir = '/vols/cms/sb3516/ForEd/2017ntuples'
+#baseDir = '/vols/cms/sb3516/ForEd/2017ntuples'
+baseDir = '/vols/cms/es811/Stage1categorisation/DebugMultiClass'
+
 #years = ['2016','2017']
 
 #years = ['2016']

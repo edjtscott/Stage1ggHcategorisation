@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import xgboost as xg
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
@@ -21,7 +21,7 @@ parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if i
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
 parser.add_option('-m','--diphomodelName', default=None, help='Name of diphomodel for testing')
 parser.add_option('-v','--dijetmodelName', default = None, help = 'Name of dijet model for testing')
-parser.add_option('-n','--nIterations', default=1, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=2000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -52,7 +52,8 @@ trainTotal['truthDipho'] = trainTotal.apply(truthDipho,axis=1)
 trainTotal['truthProcess'] = trainTotal.apply(truthProcess,axis=1)#the truthProcess function returns 0 for ggh. 1 for vbf and 2 for background processes
 
 trainTotal['dijet_centrality_gg']=np.exp(-4*(trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2)
-trainTotal['weight_LUM'] = 41.5*(trainTotal.weight)
+#trainTotal['weight_LUM'] = 41.5*(trainTotal.weight)
+trainTotal['weight_LUM'] = trainTotal.weight #FIXME no need to apply lumi here
 
 
 
@@ -181,9 +182,11 @@ dijetMVA = dijetModel.predict(dijetMatrix)
 data_dijetMVA = dijetModel.predict(datadijetMatrix)
 
 
-dijetMVA_ggHprob = dijetMVA[:,0]
+#dijetMVA_ggHprob = dijetMVA[:,0]
+dijetMVA_ggHprob = 1. - dijetMVA[:,0] #FIXME a trick to give signal events a higher score rather than lower
 dijetMVA_vbfprob = dijetMVA[:,1]
-data_dijetMVA_ggHprob =data_dijetMVA[:,0]
+#data_dijetMVA_ggHprob =data_dijetMVA[:,0]
+data_dijetMVA_ggHprob = 1. - data_dijetMVA[:,0] #FIXME a trick to give signal events a higher score rather than lower
 data_dijetMVA_vbfprob = data_dijetMVA[:,1]
 
 
@@ -204,11 +207,12 @@ printStr = ''
  # system('mkdir -p %s'%plotDir)
 
 #optimising ot three categories (stage 0)
-sigWeights = trainFW * (dijetP==1) * (trainJ>400)*(trainL<200)
-bkgWeights = dataFW 
-optimiser = CatOptim(sigWeights, trainM, [dijetMVA_vbfprob,dijetMVA_ggHprob, diphoMVA], bkgWeights, dataM, [data_dijetMVA_vbfprob, data_dijetMVA_ggHprob, data_diphoMVA], 3, ranges, names)
+sigWeights = trainFW * (dijetP==1) * (trainJ>400.)*(trainL<200.)
+bkgWeights = dataFW * (dataJ>400.) * (dataL<200.)
+#optimiser = CatOptim(sigWeights, trainM, [dijetMVA_vbfprob,dijetMVA_ggHprob, diphoMVA], bkgWeights, dataM, [data_dijetMVA_vbfprob, data_dijetMVA_ggHprob, data_diphoMVA], 3, ranges, names)
+optimiser = CatOptim(sigWeights, trainM, [dijetMVA_vbfprob,dijetMVA_ggHprob, diphoMVA], bkgWeights, dataM, [data_dijetMVA_vbfprob, data_dijetMVA_ggHprob, data_diphoMVA], 1, ranges, names)
 
-optimiser.setConstantBkg(True)
+#optimiser.setConstBkg(True)
 print 'about to optimise cuts'
 
 optimiser.optimise(opts.intLumi, opts.nIterations)
