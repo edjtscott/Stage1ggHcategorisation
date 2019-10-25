@@ -12,7 +12,6 @@ myDir = getcwd()
 #baseDir = '/vols/cms/es811/Stage1categorisation/Pass1'
 #baseDir = '/vols/cms/sb3516/ForEd/2017ntuples'
 baseDir = '/vols/cms/es811/Stage1categorisation/DebugMultiClass'
-
 #years = ['2016','2017']
 
 #years = ['2016']
@@ -39,24 +38,31 @@ intLumi = 41.5
 #dataFrame = None
 #sigFrame  = None
 
-script    = 'dataSignificancesVHhad.py'
-models    = ['vhHadModel.model']
+script    = 'dataSignificancesThreeClass.py'
+models    =None
 classModel = None
 paramSets = [None]
-for params in paramSets:
-  if not params: continue
-  params = params.split(',')
-  name = 'diphoModel'
-  for param in params:
-    var = param.split(':')[0]
-    val = param.split(':')[1]
-    name += '__%s_%s'%(var,str(val))
-  name += '.model'
-  models.append(name)
+#for params in paramSets:
+#  if not params: continue
+#  params = params.split(',')
+#  name = 'diphoModel'
+#  for param in params:
+#    var = param.split(':')[0]
+#    val = param.split(':')[1]
+#    name += '__%s_%s'%(var,str(val))
+#  name += '.model'
+##  models.append(name)
 paramSets = None
 #dataFrame = None
-dataFrame = 'dataTotal.pkl'
-sigFrame  = 'vhHadTotal.pkl'
+dataFrame = 'trainTotal.pkl'
+sigFrame  = None
+
+
+
+diphoModel = 'diphoModel.model'
+dijetModel = 'ThreeClassModel.model' 
+
+
 
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']
@@ -150,23 +156,39 @@ if __name__=='__main__':
       theCmd += '--intLumi %s '%intLumi
     if classModel: 
       theCmd += '--className %s '%classModel
-    if paramSets and models:
-      exit('ERROR do not expect both parameter set options and models. Exiting..')
-    elif paramSets: 
-      for params in paramSets:
-        fullCmd = theCmd 
-        if params: fullCmd += '--trainParams %s '%params
-        if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
-        elif dryRun: print fullCmd
-      else:
-          print fullCmd
-          system(fullCmd)
-    elif models:
-      for model in models:
-        fullCmd = theCmd
-        if model: fullCmd += '-m %s '%model
-        if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
-        elif dryRun: print fullCmd
-      else:
-          print fullCmd
-          system(fullCmd)
+    if diphoModel:
+      theCmd+= '-m %s '%diphoModel
+    if dijetModel:
+      theCmd+='-v %s '%dijetModel
+   # if paramSets and models:
+     # exit('ERROR do not expect both parameter set options and models. Exiting..')
+    #elif paramSets: 
+     # for params in paramSets:
+      #  fullCmd = theCmd 
+       # if params: fullCmd += '--trainParams %s '%params
+       # if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        #elif dryRun: print fullCmd
+      #else:
+         # print fullCmd
+          #system(fullCmd)
+    #elif models:
+     # for model in models:
+      #  fullCmd = theCmd
+       # if model: fullCmd += '-m %s '%model
+        #if not runLocal: submitJob( jobDir, fullCmd, model=model, dryRun=dryRun )
+        #elif dryRun: print fullCmd
+      #else:
+         # print fullCmd
+          #system(fullCmd)
+
+fullCmd = theCmd
+print fullCmd
+
+if not runLocal: submitJob( jobDir, fullCmd, dryRun=dryRun )
+elif dryRun:
+     print fullCmd
+else:
+    print fullCmd
+    system(fullCmd)
+
+       

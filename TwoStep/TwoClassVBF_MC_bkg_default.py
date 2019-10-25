@@ -5,7 +5,7 @@ import pandas as pd
 import xgboost as xg
 import uproot as upr
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pickle
 import sklearn
@@ -17,8 +17,8 @@ from otherHelpers import prettyHist, getAMS, computeBkg, getRealSigma
 from root_numpy import fill_hist
 import usefulStyle as useSty
 
-from matplotlib import rc
-from bayes_opt import BayesianOptimization
+#from matplotlib import rc
+#from bayes_opt import BayesianOptimization
 
 
 print 'imports done'
@@ -204,44 +204,12 @@ if not opts.dataFrame:#if the dataframe option was not used while running, creat
   print 'frame saved as %s/TwoClassTotal.pkl'%frameDir
 
 #read in dataframe if above steps done before
+#else:Mjj','dijet_centrality_gg','dijet_dphi','dijet_minDRJetPho','dijet_dipho_dphi_trunc']
+
+
 else:
-
-  trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
+ trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
 print 'Successfully loaded the dataframe'
-
-
-#______________________-getting the data.root for the bkg yields later__________________________
-#dataTotal = None
-#dataFile   = upr.open('%s/%s'%(trainDir,Data.root))
-      
-#dataTree = dataFile['vbfTagDumper/trees/Data_13TeV_GeneralDipho']
-#dataFrame = trainTree.pandas.df(allVars)
-#dataFrame['proc'] = 'Data'
-#dataTotal = dataFrame
-#dataTotal = dataTotal[dataTotal.dipho_mass>100.]
-#dataTotal = dataTotal[dataTotal.dipho_mass<180.]# diphoton mass range*********remove the signal region?
-  
-
-#dataTotal = dataTotal[dataTotal.dipho_leadIDMVA>-0.2]
-#dataTotal = dataTotal[dataTotal.dipho_subleadIDMVA>-0.2]
-#dataTotal = dataTotal[dataTotal.dipho_lead_ptoM>0.333]
-#dataTotal = dataTotal[dataTotal.dipho_sublead_ptoM>0.25]
-
-
-#dataTotal = dataTotal[dataTotal.dijet_LeadJPt>40.]
-#dataTotal = dataTotal[dataTotal.dijet_SubJPt>30.]
- 
-#dataTotal = dataTotal[dataTotal.dijet_Mjj>250.]
-
-
-
-#____________________________________________
-#__________________________________________________
-
-
-
-
-
 #set up train set and randomise the inputs
 trainFrac = 0.90
 
@@ -250,14 +218,11 @@ theShape = trainTotal.shape[0]#number of rows in total dataframe
 theShuffle = np.random.permutation(theShape)
 trainLimit = int(theShape*trainFrac)
 
-
-#define the values needed for training as numpy arrays
-#vhHadVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva', 'dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'cosThetaStar','cos_dijet_dipho_dphi', 'dijet_dipho_dEta']#do not provide dipho_mass=>do not bias the BDT by the Higgs mass used in signal MC
-
-#BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho']
-
 #dijet MVA var
 BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_centrality_gg','dijet_dphi','dijet_minDRJetPho','dijet_dipho_dphi_trunc']
+
+
+
 
 #dijet+diphoton MVA var
 #BDTVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_centrality_gg','dijet_dphi','dijet_minDRJetPho','dijet_dipho_dphi_trunc','dipho_leadEta','dipho_subleadEta','dipho_cosphi','dipho_leadIDMVA','dipho_subleadIDMVA','sigmarv','sigmawv','vtxprob']
@@ -312,9 +277,9 @@ testMatrix  = xg.DMatrix(BDTTestX, label=BDTTestY, weight=BDTTestTW, feature_nam
 #testMatrix  = xg.DMatrix(BDTTestX, label=BDTTestY, weight=BDTTestTW, feature_names=BDTVars)
 
 trainParams = {}
-#trainParams['objective'] = 'binary:logistic'
-trainParams['objective'] = 'multi:softprob'
-trainParams['num_class']=2
+trainParams['objective'] = 'binary:logistic'
+#trainParams['objective'] = 'multi:softprob'
+#trainParams['num_class']=2
 
 trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 
@@ -327,9 +292,9 @@ trainParams['nthread'] = 1#--number of parallel threads used to run xgboost
 #trainParams['colsample_bytree']=0.7
 #trainParams['min_child_weight']=0
 #trainParams['gamma']=0
-trainParams['eval_metric']='merror'
+#trainParams['eval_metric']='merror'
 
-trainParams['seed'] = 123456
+#trainParams['seed'] = 123456
 #trainParams['reg_alpha']=0.1
 #trainParams['reg_lambda']=
 
@@ -358,7 +323,8 @@ print 'trying cross-validation'
 
 #train the BDT (specify number of epochs here)
 print 'about to train BDT'
-TwoClassModel = xg.train(trainParams, trainMatrix,15,watchlist)
+#TwoClassModel = xg.train(trainParams, trainMatrix,15,watchlist)
+TwoClassModel = xg.train(trainParams, trainMatrix)
 print 'done'
 print progress
 
@@ -396,10 +362,12 @@ BDTPredYtest  = TwoClassModel.predict(testMatrix)
 #print 'labels'
 
 
-BDTPredClassTrain = np.argmax(BDTPredYtrain,axis=1)
-BDTPredClassTest = np.argmax(BDTPredYtest,axis=1)
-print 'testing argmax'
-print np.argmax([0.01,0.015])
+#BDTPredClassTrain = np.argmax(BDTPredYtrain,axis=1)
+#BDTPredClassTest = np.argmax(BDTPredYtest,axis=1)
+#print 'testing argmax'
+#print np.argmax([0.01,0.015])
+
+#exit('temp exit before plotting')
 
 ################################################################
 print 'making MVA prob score plot for all'
@@ -407,9 +375,9 @@ plt.figure()
 plt.title('MVA prob plot --trainset--vbf prob')
 #plt.bins([0,1,2,3])
 
-plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='blue',label='bkg', range = [0.,0.1])
+plt.hist((BDTPredYtrain)[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='blue',label='bkg', range = [0.,0.1])
 #plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh',range = [0.,1.])
-plt.hist((BDTPredYtrain[:,1])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf',range = [0.,0.1])
+plt.hist((BDTPredYtrain)[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf',range = [0.,0.1])
 
 plt.xlabel('BDT probabilities')
 
@@ -422,9 +390,9 @@ plt.figure()
 plt.title('MVA prob plot --testset--vbf prob')
 #plt.bins([0,1,2,3])
 
-plt.hist((BDTPredYtest[:,1])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='blue',label='bkg',range = [0.,0.1],bins=50)
+plt.hist((BDTPredYtest)[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='blue',label='bkg',range = [0.,0.1],bins=50)
 #plt.hist((BDTPredYtest[:,1])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh',range = [0.,1.],bins=50)
-plt.hist((BDTPredYtest[:,1])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf',range = [0.,0.1],bins=50)
+plt.hist((BDTPredYtest)[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf',range = [0.,0.1],bins=50)
 
 plt.xlabel('BDT probabilities')
 
@@ -451,12 +419,12 @@ def computeBkg(hist, margin ):
 cutVal_list = [0.0,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
 testScale = 1./(1.-trainFrac)
 for cutVal in cutVal_list:#BDT boundaries--we are using 3 VH tag categories?
-  selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * ((BDTPredYtest[:,1])>cutVal) )
+  selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * ((BDTPredYtest)>cutVal) )
   #selectedggh = testScale * np.sum( BDTTestFW * (BDTTestY==0) * ((BDTPredYtest[:,1])>cutVal) )
-  selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * ((BDTPredYtest[:,1])>cutVal) )
+  selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * ((BDTPredYtest)>cutVal) )
 
-  selectedbkg_exp = BDTTestM[(BDTTestY==0)&((BDTPredYtest[:,1])>cutVal)]
-  selectedbkg_exp_w = BDTTestFW[(BDTTestY==0)&((BDTPredYtest[:,1])>cutVal)]
+  selectedbkg_exp = BDTTestM[(BDTTestY==0)&((BDTPredYtest)>cutVal)]
+  selectedbkg_exp_w = BDTTestFW[(BDTTestY==0)&((BDTPredYtest)>cutVal)]
   bkgHist = r.TH1F('bkgHistTemp','bkgHistTemp',160,100,180)
   fill_hist(bkgHist, selectedbkg_exp, weights=selectedbkg_exp_w)
   background_per_GeV_from_exp = testScale*computeBkg(bkgHist,0.5)
@@ -469,129 +437,70 @@ for cutVal in cutVal_list:#BDT boundaries--we are using 3 VH tag categories?
   print 'background per GeV from exp is %.3f'%(background_per_GeV_from_exp)
 
 print 'checking the yields based on argmax-vbf class'
-selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==1))
+#selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==1))
 #selectedggh = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==1))
-selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==0))
-selectedbkg_perGeV = selectedbkg/70.
-selectedtotal = selectedvbf+selectedbkg
-print 'Selected events with argmax: vbf %.3f, bkg %.3f'%(selectedvbf, selectedbkg)
-print 'fractions for argmax selection: vbf %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedbkg/selectedtotal)
-print 'background per GeV is %.3f'%(selectedbkg_perGeV)
+#selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==0))
+#selectedbkg_perGeV = selectedbkg/70.
+#selectedtotal = selectedvbf+selectedbkg
+#print 'Selected events with argmax: vbf %.3f, bkg %.3f'%(selectedvbf, selectedbkg)
+#print 'fractions for argmax selection: vbf %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedbkg/selectedtotal)
+#print 'background per GeV is %.3f'%(selectedbkg_perGeV)
 
 
 
-print 'checking the yields based on argmax-ggh class'
-selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==0))
+#print 'checking the yields based on argmax-ggh class'
+#selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==0))
 #selectedggh = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==0))
-selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==0))
+#selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==0))
 
-selectedbkg_perGeV = selectedbkg/70.
+#selectedbkg_perGeV = selectedbkg/70.
 
-selectedtotal = selectedvbf+selectedbkg
-print 'Selected events with argmax: vbf %.3f, bkg %.3f'%(selectedvbf, selectedbkg)
-print 'fractions for argmax selection: vbf %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedbkg/selectedtotal)
-print 'background per GeV is %.3f'%(selectedbkg_perGeV)
+#selectedtotal = selectedvbf+selectedbkg
+#print 'Selected events with argmax: vbf %.3f, bkg %.3f'%(selectedvbf, selectedbkg)
+#print 'fractions for argmax selection: vbf %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedbkg/selectedtotal)
+#print 'background per GeV is %.3f'%(selectedbkg_perGeV)
 
 
-print 'checking the yields based on argmax-bkg class'
-selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==2))
+#print 'checking the yields based on argmax-bkg class'
+#selectedvbf = testScale * np.sum( BDTTestFW * (BDTTestY==1) * (BDTPredClassTest==2))
 #selectedggh = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==2))
-selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==2))
+#selectedbkg = testScale * np.sum( BDTTestFW * (BDTTestY==0) * (BDTPredClassTest==2))
 
 
-selectedbkg_perGeV = selectedbkg/70.
-selectedtotal = selectedvbf++selectedbkg
-print 'Selected events with argmax: vbf %.3f, bkg %.3f'%(selectedvbf, selectedbkg)
-print 'fractions for argmax selection: vbf %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedbkg/selectedtotal)
-print 'background per GeV is %.3f'%(selectedbkg_perGeV)
+#selectedbkg_perGeV = selectedbkg/70.
+#selectedtotal = selectedvbf++selectedbkg
+#print 'Selected events with argmax: vbf %.3f, bkg %.3f'%(selectedvbf, selectedbkg)
+#print 'fractions for argmax selection: vbf %.3f, bkg %.3f'%(selectedvbf/selectedtotal, selectedbkg/selectedtotal)
+#print 'background per GeV is %.3f'%(selectedbkg_perGeV)
 
 
 ###############################################################################
 
-#SCORE PLOT
-print 'making MVA score plot'
-plt.figure()
-plt.title('MVA score plot --trainset')
-#plt.bins([0,1,2,3])
-#plt.hist(BDTPredClassTrain[(BDTTrainY==0)],bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh')
-
-plt.hist(BDTPredClassTrain[(BDTTrainY==1)],bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf')
-plt.hist(BDTPredClassTrain[(BDTTrainY==0)], bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='blue',label='bkg')
-
-plt.xlabel('BDT class')
-
-plt.legend()
-plt.savefig('Two_MVA_score_train.png',bbox_inches = 'tight')
-plt.savefig('Two_MVA_score_train.pdf',bbox_inches = 'tight')
 
 
-plt.figure()
-plt.title('MVA score plot --testset')
-#plt.bins([0,1,2,3])
-#plt.hist(BDTPredClassTest[(BDTTestY==0)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==0)],  histtype='step',normed=1, color='red',label='ggh')
-plt.hist(BDTPredClassTest[(BDTTestY==1)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==1)],  histtype='step',normed=1, color='green',label='vbf')
-plt.hist(BDTPredClassTest[(BDTTestY==0)], bins=[0,1,2,3],weights=BDTTestFW[(BDTTestY==0)],  histtype='step',normed=1, color='blue',label='bkg')
-
-
-plt.xlabel('BDT score')
-plt.legend()
-plt.savefig('Two_MVA_score_test.png',bbox_inches = 'tight')
-plt.savefig('Two_MVA_score_test.pdf',bbox_inches = 'tight')
-
-print 'DONE'
-
-from sklearn.metrics import roc_curve, auc, roc_auc_score
 
 #plot roc curves
-
-BDTTrainY_bkg_roc = np.where(BDTTrainY==0, BDTTrainY, 1)
-BDTTestY_bkg_roc = np.where(BDTTestY==0, BDTTestY,1)
-
-print 'Training performance:auc'
-print 'area under roc curve for training set_bkg = %1.5f'%(1- roc_auc_score(BDTTrainY_bkg_roc, BDTPredYtrain[:,0], sample_weight = BDTTrainFW) )
-print 'area under roc curve for test set_bkg     = %1.5f'%(1- roc_auc_score(BDTTestY_bkg_roc, BDTPredYtest[:,0], sample_weight = BDTTestFW)  )
-roc_auc_train_bkg = 1- roc_auc_score(BDTTrainY_bkg_roc, BDTPredYtrain[:,0], sample_weight = BDTTrainFW)
-roc_auc_test_bkg = 1- roc_auc_score(BDTTestY_bkg_roc, BDTPredYtest[:,0], sample_weight = BDTTestFW) 
-
-fpr, tpr, thresholds= roc_curve(BDTTrainY_bkg_roc, BDTPredYtrain[:,0], pos_label=0, sample_weight = BDTTrainFW)
-#fpr, tpr, thresholds = roc_curve(BDTTrainY, BDTPredYtrain, pos_label=0)
-#roc_auc=auc(fpr,tpr)
-print 'loaded train roc curve'
-plt.figure()
-plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train (area =%0.2f )'%roc_auc_train_bkg)
-#plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train')
-fpr, tpr, thresholds = roc_curve(BDTTestY_bkg_roc, BDTPredYtest[:,0], pos_label=0,sample_weight = BDTTestFW)
-#roc_auc=auc(fpr,tpr)
-print 'loaded test roc curve'
-
-plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test (area =%0.2f )'%roc_auc_test_bkg)
-#plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test')
-plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Luck', zorder=5)
-plt.legend()
-plt.savefig('Two_ROC_bkg.png',bbox_inches = 'tight')
-plt.savefig('Two_ROC_bkg.pdf',bbox_inches = 'tight')
-
 
 #plot roc curves
 BDTTrainY_vbf_roc = np.where(BDTTrainY==1, BDTTrainY, 0)
 BDTTestY_vbf_roc = np.where(BDTTestY==1, BDTTestY,0)
 
 print 'Training performance:auc'
-print 'area under roc curve for training set_vbf = %1.5f'%(roc_auc_score(BDTTrainY_vbf_roc, BDTPredYtrain[:,1], sample_weight = BDTTrainFW) )
-print 'area under roc curve for test set_vbf     = %1.5f'%(roc_auc_score(BDTTestY_vbf_roc, BDTPredYtest[:,1], sample_weight = BDTTestFW)  )
+print 'area under roc curve for training set_vbf = %1.5f'%(roc_auc_score(BDTTrainY_vbf_roc, BDTPredYtrain, sample_weight = BDTTrainFW) )
+print 'area under roc curve for test set_vbf     = %1.5f'%(roc_auc_score(BDTTestY_vbf_roc, BDTPredYtest, sample_weight = BDTTestFW)  )
 
-roc_auc_train_vbf = roc_auc_score(BDTTrainY_vbf_roc, BDTPredYtrain[:,1], sample_weight = BDTTrainFW)
-roc_auc_test_vbf = roc_auc_score(BDTTestY_vbf_roc, BDTPredYtest[:,1], sample_weight = BDTTestFW) 
+roc_auc_train_vbf = roc_auc_score(BDTTrainY_vbf_roc, BDTPredYtrain, sample_weight = BDTTrainFW)
+roc_auc_test_vbf = roc_auc_score(BDTTestY_vbf_roc, BDTPredYtest, sample_weight = BDTTestFW) 
 
 
-fpr, tpr, thresholds = roc_curve(BDTTrainY_vbf_roc, BDTPredYtrain[:,1], pos_label=1,sample_weight = BDTTrainFW)
+fpr, tpr, thresholds = roc_curve(BDTTrainY_vbf_roc, BDTPredYtrain, pos_label=1,sample_weight = BDTTrainFW)
 #roc_auc=auc(fpr,tpr)
 print 'loaded train roc curve'
 plt.figure()
 plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train (area =%0.2f )'%roc_auc_train_vbf)
 #plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train')
 
-fpr, tpr, thresholds = roc_curve(BDTTestY_vbf_roc, BDTPredYtest[:,1], pos_label=1,sample_weight = BDTTestFW)
+fpr, tpr, thresholds = roc_curve(BDTTestY_vbf_roc, BDTPredYtest, pos_label=1,sample_weight = BDTTestFW)
 #roc_auc=auc(fpr,tpr)
 print 'loaded test roc curve'
 plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test (area =%0.2f)'%roc_auc_test_vbf)
@@ -602,38 +511,6 @@ plt.savefig('Two_ROC_vbf.png',bbox_inches = 'tight')
 plt.savefig('Two_ROC_vbf.pdf',bbox_inches = 'tight')
 
 
-#plot roc curves
-#BDTTrainY_bkg_roc = np.where(BDTTrainY=2, BDTTrainY, 0)
-#BDTTestY_bkg_roc = np.where(BDTTestY==2, BDTTestY,0)
-
-#BDTTrainY_bkg_roc_auc = np.where(BDTTrainY_bkg_roc==0,BDTTrainY_bkg_roc,1)
-#BDTTestY_bkg_roc_auc = np.where(BDTTestY_bkg_roc==0,BDTTestY_bkg_roc ,1)
-
-#print 'Training performance:auc'
-#print 'area under roc curve for training set_bkg = %1.5f'%(roc_auc_score(BDTTrainY_bkg_roc_auc, BDTPredYtrain[:,2], sample_weight = BDTTrainFW) )
-#print 'area under roc curve for test set_bkg     = %1.5f'%(roc_auc_score(BDTTestY_bkg_roc_auc, BDTPredYtest[:,2],sample_weight = BDTTestFW)  )
-
-#roc_auc_train_bkg = roc_auc_score(BDTTrainY_bkg_roc_auc, BDTPredYtrain[:,2], sample_weight = BDTTrainFW)
-#roc_auc_test_bkg = roc_auc_score(BDTTestY_bkg_roc_auc, BDTPredYtest[:,2],sample_weight = BDTTestFW)
-
-
-#fpr, tpr, thresholds = roc_curve(BDTTrainY_bkg_roc, BDTPredYtrain[:,2], pos_label=2,sample_weight = BDTTrainFW)
-#roc_auc=auc(fpr,tpr)
-#print 'loaded train roc curve'
-#plt.figure()
-#plt.plot(fpr, tpr, color='blue', lw=2, label='ROC curve train (area =%0.2f )'%roc_auc_train_bkg)
-#plt.plot(fpr, tpr, color='blue', lw=2,label='ROC curve train')
-
-#fpr, tpr, thresholds = roc_curve(BDTTestY_bkg_roc, BDTPredYtest[:,2], pos_label=2,sample_weight = BDTTestFW)
-#roc_auc=auc(fpr,tpr)
-#print 'loaded test roc curve'
-
-#plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test (area =%0.2f )'%roc_auc_test_bkg)
-#plt.plot(fpr, tpr, color='green', lw=2, label='ROC curve test')
-#plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Luck', zorder=5)
-#plt.legend()
-#plt.savefig('ROC_bkg.png',bbox_inches = 'tight')
-#plt.savefig('ROC_bkg.pdf',bbox_inches = 'tight')
 
 #train test comparison
 
@@ -643,8 +520,8 @@ plt.title('Train/Test comparison')
 
 
 #plt.hist(BDTPredClassTrain[(BDTTrainY==0)],bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh (train)')
-plt.hist(BDTPredClassTrain[(BDTTrainY==1)],bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf (train')
-plt.hist(BDTPredClassTrain[(BDTTrainY==0)], bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='blue',label='bkg (train')
+plt.hist(BDTPredYtrain[(BDTTrainY==1)],bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf (train')
+plt.hist(BDTPredYtrain[(BDTTrainY==0)], bins=[0,1,2,3], weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='blue',label='bkg (train')
 
 plt.xlabel('BDT class')
 
@@ -652,9 +529,9 @@ plt.xlabel('BDT class')
 decisions = []
 weight    = []
 
-d1 = BDTPredClassTest[(BDTTestY==0)]
-d2 = BDTPredClassTest[(BDTTestY==1)]
-#d3 = BDTPredClassTest[(BDTTestY==2)]
+d1 = BDTPredYtest[(BDTTestY==0)]
+d2 = BDTPredYtest[(BDTTestY==1)]
+#d3 = BDTPredYtest[(BDTTestY==2)]
 
 w1 = BDTTestFW[(BDTTestY==0)]
 w2 = BDTTestFW[(BDTTestY==1)]
