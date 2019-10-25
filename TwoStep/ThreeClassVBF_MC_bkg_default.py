@@ -260,6 +260,7 @@ BDTY  = trainTotal['truthProcess'].values#the training target two classes 1 for 
 BDTTW = trainTotal['ProcessWeight'].values
 BDTFW = trainTotal['weightLUM'].values
 BDTM  = trainTotal['dipho_mass'].values
+BDTNJ = trainTotal['dijet_nj'].values
 
 
 #do the shuffle
@@ -268,6 +269,7 @@ BDTY  = BDTY[theShuffle]
 BDTTW = BDTTW[theShuffle]
 BDTFW = BDTFW[theShuffle]
 BDTM  = BDTM[theShuffle]
+BDTNJ = BDTNJ[theShuffle]
 
 #split into train and test
 BDTTrainX,  BDTTestX  = np.split( BDTX,  [trainLimit] )
@@ -275,7 +277,7 @@ BDTTrainY,  BDTTestY  = np.split( BDTY,  [trainLimit] )
 BDTTrainTW, BDTTestTW = np.split( BDTTW, [trainLimit] )
 BDTTrainFW, BDTTestFW = np.split( BDTFW, [trainLimit] )
 BDTTrainM,  BDTTestM  = np.split( BDTM,  [trainLimit] )
-
+BDTTrainNJ, BDTTestNJ = np.split( BDTNJ, [trainLimit] )
 
 #set up the training and testing matrices
 trainMatrix = xg.DMatrix(BDTTrainX, label=BDTTrainY, weight=BDTTrainTW, feature_names=BDTVars)
@@ -371,7 +373,52 @@ BDTPredYtest  = ThreeClassModel.predict(testMatrix)
 
 BDTPredClassTrain = np.argmax(BDTPredYtrain,axis=1)
 BDTPredClassTest = np.argmax(BDTPredYtest,axis=1)
+###########################
+#2D plots of probabilities
+#ggh prob of vbf events
+x_vbf = (BDTPredYtrain[:,0])[(BDTTrainY==1)]
+#vbf prob of vbf events
+y_vbf = (BDTPredYtrain[:,1])[(BDTTrainY==1)]
+w_vbf = BDTTrainFW[BDTTrainY==1]
 
+
+plt.hist2d(x_vbf, y_vbf,bins = 50,weights = w_vbf, range = [[0,1],[0,1]], label = 'vbf events')                                                                                                                       
+plt.title('vbf events')                                                                                                                                                                                                                     
+plt.xlabel('ggh probability')                                                                                                                                                                                                               
+plt.ylabel('vbf probability')                                                                                                                                                                                                               
+plt.savefig('2D_vbf.png',bbox_inches = 'tight')                                                                                                                                                                                             
+plt.savefig('2D_vbf.pdf',bbox_inches = 'tight') 
+
+
+#2D plots of probabilities                                                                                                                                                                                                                   
+#ggh prob of ggh events                                                                                                                                                                                                                      
+x_ggh = (BDTPredYtrain[:,0])[(BDTTrainY==0)]
+#vbf prob of vbf events                                                                                                                                                                                                                      
+y_ggh = (BDTPredYtrain[:,1])[(BDTTrainY==0)]
+w_ggh = BDTTrainFW[BDTTrainY==0]
+
+
+plt.hist2d(x_ggh, y_ggh,bins = 50,weights = w_ggh, range = [[0,1],[0,1]], label = 'ggh events')
+plt.title('ggh events')
+plt.xlabel('ggh probability')
+plt.ylabel('vbf probability')
+plt.savefig('2D_ggh.png',bbox_inches = 'tight')
+plt.savefig('2D_ggh.pdf',bbox_inches = 'tight')
+
+
+#ggh prob of ggh events                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+x_bkg = (BDTPredYtrain[:,0])[(BDTTrainY==2)]
+#vbf prob of vbf events                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+y_bkg = (BDTPredYtrain[:,1])[(BDTTrainY==2)]
+w_bkg = BDTTrainFW[BDTTrainY==2]
+
+
+plt.hist2d(x_bkg, y_bkg,bins = 50,weights = w_bkg, range = [[0,1],[0,1]], label = 'ggh events')
+plt.title('bkg events')
+plt.xlabel('ggh probability')
+plt.ylabel('vbf probability')
+plt.savefig('2D_bkg.png',bbox_inches = 'tight')
+plt.savefig('2D_bkg.pdf',bbox_inches = 'tight')
 
 ################################################################
 print 'making MVA prob score plot for all'
@@ -414,6 +461,9 @@ plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==2)],bins=50,weights=BDTTrainFW[(BDTTra
 plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==0)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)], histtype='step',normed=1, color='red',label='ggh',range = [0.,1.])
 plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==1)],bins=50,weights=BDTTrainFW[(BDTTrainY==1)], histtype='step',normed=1, color='green',label='vbf',range = [0.,1.])
 
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==0)&(BDTTrainNJ==2)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)&(BDTTrainNJ==2)], histtype='step',normed=1, color='orange',label='ggh-2j',range = [0.,1.])
+plt.hist((BDTPredYtrain[:,0])[(BDTTrainY==0)&(BDTTrainNJ==3)],bins=50,weights=BDTTrainFW[(BDTTrainY==0)&(BDTTrainNJ==3)], histtype='step',normed=1, color='magenta',label='ggh-3j',range = [0.,1.])
+
 plt.xlabel('BDT probabilities')
 
 plt.legend()
@@ -428,6 +478,11 @@ plt.title('MVA prob plot --testset-- ggh prob')
 plt.hist((BDTPredYtest[:,0])[(BDTTestY==2)],weights=BDTTestFW[(BDTTestY==2)], histtype='step',normed=1, color='blue',label='bkg',range = [0.,1.], bins=50)
 plt.hist((BDTPredYtest[:,0])[(BDTTestY==0)],weights=BDTTestFW[(BDTTestY==0)], histtype='step',normed=1, color='red',label='ggh',range = [0.,1.],bins=50)
 plt.hist((BDTPredYtest[:,0])[(BDTTestY==1)],weights=BDTTestFW[(BDTTestY==1)], histtype='step',normed=1, color='green',label='vbf',range = [0.,1.],bins=50)
+
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==0)&(BDTTestNJ==2)],bins=50,weights=BDTTestFW[(BDTTestY==0)&(BDTTestNJ==2)], histtype='step',normed=1, color='orange',label='ggh-2j',range = [0.,1.])
+plt.hist((BDTPredYtest[:,0])[(BDTTestY==0)&(BDTTestNJ==3)],bins=50,weights=BDTTestFW[(BDTTestY==0)&(BDTTestNJ==3)], histtype='step',normed=1, color='magenta',label='ggh-3j',range = [0.,1.])
+
+
 
 plt.xlabel('BDT probabilities')
 
@@ -744,23 +799,38 @@ print 'done feature importance'
 
 #PLOTTING INTERESTING VARIABLES
 
-plotVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar','dipho_mass', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dipho_leadR9','dipho_subleadR9','dijet_dipho_dphi_trunc','dijet_dipho_pt','dijet_mva','dipho_dijet_MVA','dijet_jet1_RMS','dijet_jet2_RMS','dipho_lead_hoe','dipho_sublead_hoe','dipho_lead_elveto','dipho_sublead_elveto','jet1_HFHadronEnergyFraction','jet1_HFEMEnergyFraction', 'jet2_HFHadronEnergyFraction','jet2_HFEMEnergyFraction']
+#plotVars = ['dipho_lead_ptoM','dipho_sublead_ptoM','dipho_mva','dijet_leadEta','dijet_subleadEta','dijet_LeadJPt','dijet_SubJPt','dijet_abs_dEta','dijet_Mjj','dijet_nj', 'cosThetaStar','dipho_mass', 'cos_dijet_dipho_dphi','dijet_dipho_dEta','dijet_centrality_gg','dijet_jet1_QGL','dijet_jet2_QGL','dijet_dphi','dijet_minDRJetPho','dipho_leadIDMVA','dipho_subleadIDMVA', 'dipho_cosphi','vtxprob','sigmarv','sigmawv','dipho_leadEta','dipho_subleadEta','dipho_leadPhi','dipho_subleadPhi','dipho_leadR9','dipho_subleadR9','dijet_dipho_dphi_trunc','dijet_dipho_pt','dijet_mva','dipho_dijet_MVA','dijet_jet1_RMS','dijet_jet2_RMS','dipho_lead_hoe','dipho_sublead_hoe','dipho_lead_elveto','dipho_sublead_elveto','jet1_HFHadronEnergyFraction','jet1_HFEMEnergyFraction', 'jet2_HFHadronEnergyFraction','jet2_HFEMEnergyFraction']
 
 
-plotVarsX=['lead photon pT/mgg', 'sublead photon pT/mgg', 'diphoton MVA score', 'lead jet eta', 'sublead jet eta', 'lead jet pT', 'sublead jet pT', 'dijet dEta', 'dijet Mjj', 'number of jets', 'oosThetaStar','diphoton invariant mass','dijet dipho cos phi', 'dijet dipho dEta','dijet centrality gg','dijet jet1 QGL','dijet jet2 QGL','dijet dphi','dijet minDRJetPho','dipho leadIDMVA','dipho subleadIDMVA', 'dipho cosphi','vtxprob','sigmarv','sigmawv','dipho leadEta','dipho subleadEta','dipho leadPhi','dipho subleadPhi','dipho leadR9','dipho subleadR9','dijet dipho dphi trunc','dijet dipho pt','dijet mva','dipho dijet MVA','dijet jet1 RMS','dijet jet2 RMS','dipho lead hoe','dipho sublead hoe','dipho lead elveto','dipho sublead elveto','jet1 HFHadronEnergyFraction','jet1 HFEMEnergyFraction', 'jet2 HFHadronEnergyFraction','jet2 HFEMEnergyFraction']
+#plotVarsX=['lead photon pT/mgg', 'sublead photon pT/mgg', 'diphoton MVA score', 'lead jet eta', 'sublead jet eta', 'lead jet pT', 'sublead jet pT', 'dijet dEta', 'dijet Mjj', 'number of jets', 'oosThetaStar','diphoton invariant mass','dijet dipho cos phi', 'dijet dipho dEta','dijet centrality gg','dijet jet1 QGL','dijet jet2 QGL','dijet dphi','dijet minDRJetPho','dipho leadIDMVA','dipho subleadIDMVA', 'dipho cosphi','vtxprob','sigmarv','sigmawv','dipho leadEta','dipho subleadEta','dipho leadPhi','dipho subleadPhi','dipho leadR9','dipho subleadR9','dijet dipho dphi trunc','dijet dipho pt','dijet mva','dipho dijet MVA','dijet jet1 RMS','dijet jet2 RMS','dipho lead hoe','dipho sublead hoe','dipho lead elveto','dipho sublead elveto','jet1 HFHadronEnergyFraction','jet1 HFEMEnergyFraction', 'jet2 HFHadronEnergyFraction','jet2 HFEMEnergyFraction']
 
-plotVarsR=[(0,5),(0,5),(-1,1), (-3,3),(-3,3),(0,300),(0,300),(0,6),(0,4000),(0,8),(-1,1),(100,180),(-1,1),(-3,3),(0,600),(0,8),(0,1),(-100, 100),(-10,10),(-1,1),(-1,1),(0,1),(-1,1),(0,1),(0,1.1),(0,0.1),(0,0.1),(-3,3),(-3,3),(-3.2,3.2),(0,2),(0,2),(-10,10),(0,400),(-1,1),(-1,1),(-10,10),(-10,10),(0,0.04),(0,0.04),(0.95,1.5),(0.95,1.5),(-1,1),(-1,1),(-1,1),(-1,1)]
+#plotVarsR=[(0,5),(0,5),(-1,1), (-3,3),(-3,3),(0,300),(0,300),(0,6),(0,4000),(0,8),(-1,1),(100,180),(-1,1),(-3,3),(0,600),(0,8),(0,1),(-100, 100),(-10,10),(-1,1),(-1,1),(0,1),(-1,1),(0,1),(0,1.1),(0,0.1),(0,0.1),(-3,3),(-3,3),(-3.2,3.2),(0,2),(0,2),(-10,10),(0,400),(-1,1),(-1,1),(-10,10),(-10,10),(0,0.04),(0,0.04),(0.95,1.5),(0.95,1.5),(-1,1),(-1,1),(-1,1),(-1,1)]
+
+
+plotVars = ['dijet_LeadJPt','dijet_SubJPt','dipho_lead_ptoM','dipho_sublead_ptoM','dijet_Mjj','dijet_centrality_gg','dijet_abs_dEta', 'dijet_minDRJetPho','dijet_dphi', 'dijet_dipho_dphi_trunc']
+plotVarsX = ['lead jet pT', 'sublead jet pT','lead photon pT/mgg', 'sublead photon pT/mgg','dijet Mjj', 'dijet centrality gg', 'dijet dEta','dijet minDRJetPho','dijet dphi', 'dijet dipho dphi trunc']
+plotVarsR = [(0,300),(0,300),(0,4),(0,2),(0,3000), (0,1), (0,6), (0.5,4.0), (0,3.0), (0,3.0)]
+
+
 
 #separate dataframes to plot
 df_ggh = trainTotal[trainTotal['proc']=='ggh']
 df_VBF = trainTotal[trainTotal['proc']=='vbf']
-df_Data = trainTotal[trainTotal['proc']=='Data']
+#df_Data = trainTotal[trainTotal['proc']=='Data']
+df_Dipho = trainTotal[trainTotal['proc']=='Dipho']
+df_GJet = trainTotal[trainTotal['proc']=='GJet']
+df_QCD = trainTotal[trainTotal['proc']=='QCD']
+
+df_bkg = trainTotal[(trainTotal['proc']=='Dipho')|(trainTotal['proc']=='GJet')|(trainTotal['proc']=='QCD')]
 
 
-numpy_ggh_weight = df_ggh['weight'].values
-numpy_VBF_weight = df_VBF['weight'].values
-numpy_Data_weight = df_Data['weight'].values
-
+numpy_ggh_weight = df_ggh['weightR'].values
+numpy_VBF_weight = df_VBF['weightR'].values
+#numpy_Data_weight = df_Data['weightR'].values
+numpy_Dipho_weight = df_Dipho['weightR'].values
+numpy_GJet_weight  = df_GJet['weightR'].values
+numpy_QCD_weight = df_QCD['weightR'].values
+numpy_bkg_weight = df_bkg['weightR'].values
 
 #defining plot function
 
@@ -769,8 +839,11 @@ def plot_variable(var='cosThetaStar', var_label = '$\cos\,\theta^*$', setrange=(
 
   numpy_ggh = df_ggh[var].values
   numpy_VBF = df_VBF[var].values
-  numpy_Data = df_Data[var].values
-  
+ # numpy_Data = df_Data[var].values
+  numpy_Dipho = df_Dipho[var].values
+  numpy_GJet = df_GJet[var].values
+  numpy_QCD = df_QCD[var].values
+  numpy_bkg = df_bkg[var].values
 
   plt.figure(figsize=(6,6))
   plt.rc('text', usetex=True)
@@ -780,7 +853,13 @@ def plot_variable(var='cosThetaStar', var_label = '$\cos\,\theta^*$', setrange=(
 
   plt.hist(numpy_ggh, bins=50,weights=numpy_ggh_weight,histtype='step', normed=1, color = 'red',range=setrange, label = 'ggh',linewidth=2.0)
   plt.hist(numpy_VBF, bins=50,weights=numpy_VBF_weight,histtype='step', normed=1, color = 'green', range=setrange, label = 'vbf',linewidth=2.0)
-  plt.hist(numpy_Data, bins=50,weights=numpy_Data_weight,histtype='step', normed=1, color = 'blue', range=setrange,label = 'bkg',linewidth=2.0)
+  #plt.hist(numpy_Data, bins=50,weights=numpy_Data_weight,histtype='step', normed=1, color = 'blue', range=setrange,label = 'bkg',linewidth=2.0)
+  #plt.hist(numpy_Dipho, bins=50,weights=numpy_Dipho_weight,histtype='step', normed=1, color = 'blue',range=setrange, label = 'dipho',linewidth=2.0)
+  #plt.hist(numpy_GJet, bins=50,weights=numpy_GJet_weight,histtype='step', normed=1, color = 'cyan',range=setrange, label = 'gjet',linewidth=2.0)
+  #plt.hist(numpy_QCD, bins=50,weights=numpy_QCD_weight,histtype='step', normed=1, color = 'violet',range=setrange, label = 'qcd',linewidth=2.0)
+
+  plt.hist(numpy_bkg, bins=50,weights=numpy_bkg_weight,histtype='step', normed=1, color = 'blue', range=setrange, label = 'bkg',linewidth=2.0)
+
 
   plt.legend(loc='best')
   plt.xlabel(var_label)
@@ -793,8 +872,8 @@ def plot_variable(var='cosThetaStar', var_label = '$\cos\,\theta^*$', setrange=(
 var_list = range(0,len(plotVars))
 
 print 'plotting relevant variables'
-#for i in var_list:
-  #plot_variable(var=plotVars[i], var_label =plotVarsX[i], setrange=plotVarsR[i])
+for i in var_list:
+  plot_variable(var=plotVars[i], var_label =plotVarsX[i], setrange=plotVarsR[i])
 
 print 'all plots created'
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

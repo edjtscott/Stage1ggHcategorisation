@@ -96,7 +96,7 @@ class CatOptim:
     self.sortOthers    = False
     self.addNonSig     = False
     self.transform     = False
-    self.constantBkg   = False
+    self.setConstantBkg   = False
     assert len(bkgDiscrims) == len(sigDiscrims)
     assert len(ranges)      == len(sigDiscrims)
     assert len(names)       == len(sigDiscrims)
@@ -269,7 +269,7 @@ class CatOptim:
   def computeBkg( self, hist, effSigma ):
     bkgVal = 9999.
     if hist.GetEntries() > 10 and hist.Integral()>0.000001:
-      if self.constBkg:
+      if self.setConstantBkg:
         totalBkg = hist.Integral( hist.FindBin(100.1), hist.FindBin(119.9) ) + hist.Integral( hist.FindBin(130.1), hist.FindBin(179.9) )
         bkgVal = (totalBkg/70.) * 2. * effSigma
       else:
