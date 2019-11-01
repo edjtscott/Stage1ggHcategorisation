@@ -97,6 +97,7 @@ class CatOptim:
     self.addNonSig     = False
     self.transform     = False
     self.constBkg      = False
+    self.opposites     = []
     assert len(bkgDiscrims) == len(sigDiscrims)
     assert len(ranges)      == len(sigDiscrims)
     assert len(names)       == len(sigDiscrims)
@@ -133,6 +134,9 @@ class CatOptim:
   def setConstBkg( self, val ):
     self.constBkg = val
 
+  def setOpposite( self, name ):
+    self.opposites.append(name)
+
   def optimise(self, lumi, nIters):
     '''Run the optimisation for a given number of iterations'''
     for iIter in range(nIters):
@@ -153,13 +157,25 @@ class CatOptim:
         bkgWeights = self.bkgWeights
         if self.addNonSig: nonSigWeights = self.nonSigWeights
         for iName,name in enumerate(self.names):
-          sigWeights = sigWeights * (self.sigDiscrims[name]>cuts[name][iCat])
-          bkgWeights = bkgWeights * (self.bkgDiscrims[name]>cuts[name][iCat])
-          if self.addNonSig: nonSigWeights = nonSigWeights * (self.nonSigDiscrims[name]>cuts[name][iCat])
+          if name in self.opposites:
+            sigWeights = sigWeights * (self.sigDiscrims[name]<cuts[name][iCat])
+            bkgWeights = bkgWeights * (self.bkgDiscrims[name]<cuts[name][iCat])
+          else:
+            sigWeights = sigWeights * (self.sigDiscrims[name]>cuts[name][iCat])
+            bkgWeights = bkgWeights * (self.bkgDiscrims[name]>cuts[name][iCat])
+          if self.addNonSig: 
+            if name in self.opposites:
+              nonSigWeights = nonSigWeights * (self.nonSigDiscrims[name]<cuts[name][iCat])
+            else:
+              nonSigWeights = nonSigWeights * (self.nonSigDiscrims[name]>cuts[name][iCat])
           if not lastCat:
             if iName==0 or self.sortOthers:
-              sigWeights = sigWeights * (self.sigDiscrims[name]<cuts[name][iCat+1])
-              bkgWeights = bkgWeights * (self.bkgDiscrims[name]<cuts[name][iCat+1])
+              if name in self.opposites:
+                sigWeights = sigWeights * (self.sigDiscrims[name]>cuts[name][iCat+1])
+                bkgWeights = bkgWeights * (self.bkgDiscrims[name]>cuts[name][iCat+1])
+              else:
+                sigWeights = sigWeights * (self.sigDiscrims[name]<cuts[name][iCat+1])
+                bkgWeights = bkgWeights * (self.bkgDiscrims[name]<cuts[name][iCat+1])
               if self.addNonSig: nonSigWeights = nonSigWeights * (self.nonSigDiscrims[name]<cuts[name][iCat+1])
         sigHist = r.TH1F('sigHistTemp','sigHistTemp',160,100,180)
         fill_hist(sigHist, self.sigMass, weights=sigWeights)
