@@ -1,8 +1,8 @@
 #usual imports
-import ROOT as r
 import numpy as np
 import pandas as pd
 import xgboost as xg
+import uproot as upr
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -12,7 +12,6 @@ from os import path, system
 
 from addRowFunctions import addPt, truthDipho, reco, diphoWeight, altDiphoWeight
 from otherHelpers import prettyHist, getAMS, computeBkg, getRealSigma
-from root_numpy import tree2array, fill_hist
 import usefulStyle as useSty
 
 #configure options
@@ -22,7 +21,6 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Path to dataframe if it already exists')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 parser.add_option('--trainParams',default=None, help='Comma-separated list of colon-separated pairs corresponding to parameters for the training')
-#parser.add_option('--equalWeights', default=False, action='store_true', help='Alter weights for training so that signal and background have equal sum of weights')
 (opts,args)=parser.parse_args()
 
 #setup global variables
@@ -34,15 +32,20 @@ trainFrac = 0.7
 validFrac = 0.1
 
 #get trees from files, put them in data frames
-#procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'tth':'ttH.root', 'wzh':'VH.root', 'dipho':'Dipho.root', 'gjet':'GJet.root', 'qcd':'QCD.root'}
-procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'tth':'powheg_ttH.root', 
-               'dipho':'Dipho.root', 'gjet_promptfake':'GJet_pf.root', 'gjet_fakefake':'GJet_ff.root', 'qcd_promptfake':'QCD_pf.root', 'qcd_fakefake':'QCD_ff.root'}
+procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', #'tth':'powheg_ttH.root', 
+               'dipho':'Dipho.root', 'gjet_anyfake':'GJet.root', 'qcd_anyfake':'QCD.root'}
 theProcs = procFileMap.keys()
+signals     = ['ggh','vbf']
+backgrounds = ['dipho','gjet_anyfake','qcd_anyfake']
 
 #define the different sets of variables used
-diphoVars  = ['leadmva','subleadmva','leadptom','subleadptom',
-              'leadeta','subleadeta',
-              'CosPhi','vtxprob','sigmarv','sigmawv']
+allVars    = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
+              'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'dipho_dijet_ptHjj', 'dijet_dipho_dphi_trunc',
+              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'HTXSstage1_1_cat', 'dipho_mass']
+
+diphoVars = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
+              'dijet_leadEta', 'dijet_subleadEta', 
+              'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv']
 
 #either get existing data frame or create it
 trainTotal = None
@@ -50,27 +53,11 @@ if not opts.dataFrame:
   trainFrames = {}
   #get the trees, turn them into arrays
   for proc,fn in procFileMap.iteritems():
-      trainFile   = r.TFile('%s/%s'%(trainDir,fn))
-      if proc[-1].count('h') or 'vbf' in proc: trainTree = trainFile.Get('vbfTagDumper/trees/%s_125_13TeV_VBFDiJet'%proc)
-      else: trainTree = trainFile.Get('vbfTagDumper/trees/%s_13TeV_VBFDiJet'%proc)
-      trainTree.SetBranchStatus('nvtx',0)
-      trainTree.SetBranchStatus('VBFMVAValue',0)
-      trainTree.SetBranchStatus('dijet_*',0)
-      trainTree.SetBranchStatus('dZ',0)
-      trainTree.SetBranchStatus('centralObjectWeight',0)
-      trainTree.SetBranchStatus('rho',0)
-      trainTree.SetBranchStatus('nvtx',0)
-      trainTree.SetBranchStatus('event',0)
-      trainTree.SetBranchStatus('lumi',0)
-      trainTree.SetBranchStatus('processIndex',0)
-      trainTree.SetBranchStatus('run',0)
-      trainTree.SetBranchStatus('npu',0)
-      trainTree.SetBranchStatus('puweight',0)
-      newFile = r.TFile('/vols/cms/es811/Stage1categorisation/trainTrees/new.root','RECREATE')
-      newTree = trainTree.CloneTree()
-      trainFrames[proc] = pd.DataFrame( tree2array(newTree) )
-      del newTree
-      del newFile
+      trainFile = upr.open('%s/%s'%(trainDir,fn)) 
+      if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
+      elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+      else: raise Exception('Error did not recognise process %s !'%proc)
+      trainFrames[proc] = trainTree.pandas.df(allVars)
       trainFrames[proc]['proc'] = proc
   print 'got trees'
   
@@ -83,23 +70,28 @@ if not opts.dataFrame:
   print 'created total frame'
   
   #then filter out the events into only those with the phase space we are interested in
-  trainTotal = trainTotal[trainTotal.CMS_hgg_mass>100.]
-  trainTotal = trainTotal[trainTotal.CMS_hgg_mass<180.]
+  trainTotal = trainTotal[trainTotal.dipho_mass>100.]
+  trainTotal = trainTotal[trainTotal.dipho_mass<180.]
   print 'done mass cuts'
-  
-  #some extra cuts that are applied for diphoton BDT in the AN
-  trainTotal = trainTotal[trainTotal.leadmva>-0.9]
-  trainTotal = trainTotal[trainTotal.subleadmva>-0.9]
-  trainTotal = trainTotal[trainTotal.leadptom>0.333]
-  trainTotal = trainTotal[trainTotal.subleadptom>0.25]
-  trainTotal = trainTotal[trainTotal.stage1cat>-1.]
+  trainTotal = trainTotal[trainTotal.dipho_leadIDMVA>-0.9]
+  trainTotal = trainTotal[trainTotal.dipho_subleadIDMVA>-0.9]
+  trainTotal = trainTotal[trainTotal.dipho_lead_ptoM>0.333]
+  trainTotal = trainTotal[trainTotal.dipho_sublead_ptoM>0.25]
   print 'done basic preselection cuts'
-  
+
+  sigSumW = np.sum( trainTotal[trainTotal.HTXSstage1_1_cat>0.01]['weight'].values )
+  bkgSumW = np.sum( trainTotal[trainTotal.HTXSstage1_1_cat==0]['weight'].values )
+  weightRatio = bkgSumW/sigSumW
+  print 'Weight info:'
+  print 'sigSumW %.6f'%sigSumW
+  print 'bkgSumW %.6f'%bkgSumW
+  print 'S/B ratio %.6f'%(1./weightRatio)
+
   #add extra info to dataframe
   print 'about to add extra columns'
-  trainTotal['truthDipho'] = trainTotal.apply(truthDipho,axis=1)
-  trainTotal['diphoWeight'] = trainTotal.apply(diphoWeight,axis=1)
-  trainTotal['altDiphoWeight'] = trainTotal.apply(altDiphoWeight, axis=1)
+  trainTotal['truthDipho'] = trainTotal.apply(truthDipho, axis=1)
+  trainTotal['diphoWeight'] = trainTotal.apply(diphoWeight, axis=1)
+  trainTotal['altDiphoWeight'] = trainTotal.apply(altDiphoWeight, axis=1, args=[weightRatio])
   print 'all columns added'
 
   #save as a pickle file
@@ -113,13 +105,6 @@ else:
   trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
   print 'Successfully loaded the dataframe'
 
-sigSumW = np.sum( trainTotal[trainTotal.stage1cat>0.01]['weight'].values )
-bkgSumW = np.sum( trainTotal[trainTotal.stage1cat==0]['weight'].values )
-print 'sigSumW %.6f'%sigSumW
-print 'bkgSumW %.6f'%bkgSumW
-print 'ratio %.6f'%(sigSumW/bkgSumW)
-#exit('first just count the weights')
-
 #define the indices shuffle (useful to keep this separate so it can be re-used)
 theShape = trainTotal.shape[0]
 diphoShuffle = np.random.permutation(theShape)
@@ -132,7 +117,7 @@ diphoY  = trainTotal['truthDipho'].values
 diphoTW = trainTotal['diphoWeight'].values
 diphoAW = trainTotal['altDiphoWeight'].values
 diphoFW = trainTotal['weight'].values
-diphoM  = trainTotal['CMS_hgg_mass'].values
+diphoM  = trainTotal['dipho_mass'].values
 del trainTotal
 
 diphoX  = diphoX[diphoShuffle]
@@ -198,7 +183,8 @@ print 'Alternative training performance:'
 print 'area under roc curve for training set = %1.3f'%( roc_auc_score(diphoTrainY, altDiphoPredYxcheck, sample_weight=diphoTrainFW) )
 print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(diphoTestY, altDiphoPredY, sample_weight=diphoTestFW) )
 
-#exit("Plotting not working for now so exit")
+exit("Skip plotting for now") #FIXME maybe make configurable?
+
 #make some plots 
 plotDir = trainDir.replace('trees','plots')
 plotDir = '%s/%s'%paramExt

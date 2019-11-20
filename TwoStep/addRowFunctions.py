@@ -2,7 +2,7 @@ def addPt(row):
     return row['CMS_hgg_mass']*row['diphoptom']
 
 def truthDipho(row):
-    if not row['stage1cat']==0: return 1
+    if not row['HTXSstage1_1_cat']==0: return 1
     else: return 0
 
 def truthVhHad(row):
@@ -17,13 +17,13 @@ def vhHadWeight(row, ratio):
     else: return weight
 
 def truthClass(row):
-    if not row['stage1cat']==0: return int(row['stage1cat']-3)
+    if not row['HTXSstage1_1_cat']==0: return int(row['HTXSstage1_1_cat']-3)
     else: return 0
 
 def truthJets(row):
-    if row['stage1cat']==3: return 0
-    elif row['stage1cat']>=4 and row['stage1cat']<=7: return 1
-    elif row['stage1cat']>=8 and row['stage1cat']<=11: return 2
+    if row['HTXSstage1_1_cat']==3: return 0
+    elif row['HTXSstage1_1_cat']>=4 and row['HTXSstage1_1_cat']<=7: return 1
+    elif row['HTXSstage1_1_cat']>=8 and row['HTXSstage1_1_cat']<=11: return 2
     else: return -1
 
 def reco(row):
@@ -43,7 +43,7 @@ def diphoWeight(row, sigWeight=1.):
     weight = row['weight']
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
-    elif row['stage1cat'] > 0.01:
+    elif row['HTXSstage1_1_cat'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
@@ -80,13 +80,12 @@ def jetWeight(row):
     weight = abs(weight)
     return weight
 
-#def altDiphoWeight(row, sigWeight=1./0.001169):
-def altDiphoWeight(row, sigWeight=1./0.001297):
+def altDiphoWeight(row, weightRatio):
     weight = row['weight']
     if row['proc'].count('qcd'):
         weight *= 0.04 #downweight bc too few events
-    elif row['stage1cat'] > 0.01:
-        weight *= sigWeight #arbitrary change in signal weight, to be optimised
+    elif row['HTXSstage1_1_cat'] > 0.01:
+        weight *= weightRatio #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
         weight *= ( (row['vtxprob']/row['sigmarv']) + ((1.-row['vtxprob'])/row['sigmawv']) )
