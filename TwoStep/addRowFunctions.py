@@ -6,12 +6,18 @@ def truthDipho(row):
     else: return 0
 
 def truthVhHad(row):
-    if row['tempStage1bin']==203: return 1
-    elif row['tempStage1bin']>107 and row['tempStage1bin']<111: return 0
-    else: return -1
+    if row['HTXSstage1_1_cat']==204: return 1
+    else: return 0
+    #elif row['HTXSstage1_1_cat']>107 and row['HTXSstage1_1_cat']<111: return 0
+    #else: return -1
 
 def vhHadWeight(row, ratio):
     weight = 1000. * abs(row['weight'])
+    if row['proc'].count('qcd'): 
+        weight *= 0.04 #downweight bc too few events
+    #now account for the resolution
+    if row['sigmarv']>0. and row['sigmawv']>0.:
+        weight *= ( (row['vtxprob']/row['sigmarv']) + ((1.-row['vtxprob'])/row['sigmawv']) )
     if row['truthVhHad']==1: 
       return ratio * weight
     else: return weight

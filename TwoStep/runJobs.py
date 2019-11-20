@@ -5,8 +5,8 @@ from otherHelpers import submitJob
 dryRun = False
 #dryRun = True
 
-#runLocal = False
-runLocal = True
+runLocal = False
+#runLocal = True
 
 myDir = getcwd()
 baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass2'
@@ -18,14 +18,14 @@ baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass2'
 years = ['2017']
 intLumi = 41.5
 
-script    = 'diphotonCategorisation.py'
-paramSets = [None]
-#paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
-models    = None
-classModel = None
-#dataFrame = 'trainTotal.pkl'
-dataFrame = None
-sigFrame  = None
+#script    = 'diphotonCategorisation.py'
+#paramSets = [None]
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'trainTotal.pkl'
+#dataFrame = None
+#sigFrame  = None
 
 #script    = 'vhHadCategorisation.py'
 #paramSets = [None]
@@ -36,24 +36,24 @@ sigFrame  = None
 #dataFrame = None
 #sigFrame  = None
 
-#script    = 'dataSignificancesVHhad.py'
-#models    = ['vhHadModel.model']
-#classModel = None
-#paramSets = [None]
-#for params in paramSets:
-#  if not params: continue
-#  params = params.split(',')
-#  name = 'diphoModel'
-#  for param in params:
-#    var = param.split(':')[0]
-#    val = param.split(':')[1]
-#    name += '__%s_%s'%(var,str(val))
-#  name += '.model'
-#  models.append(name)
-#paramSets = None
-#dataFrame = None
-##dataFrame = 'dataTotal.pkl'
-#sigFrame  = 'vhHadTotal.pkl'
+script    = 'dataSignificancesVHhad.py'
+models    = ['altDiphoModel.model']
+classModel = None
+paramSets = [None]
+for params in paramSets:
+  if not params: continue
+  params = params.split(',')
+  name = 'diphoModel'
+  for param in params:
+    var = param.split(':')[0]
+    val = param.split(':')[1]
+    name += '__%s_%s'%(var,str(val))
+  name += '.model'
+  models.append(name)
+paramSets = None
+dataFrame = None
+#dataFrame = 'dataTotal.pkl'
+sigFrame  = 'vhHadTotal.pkl'
 
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']
