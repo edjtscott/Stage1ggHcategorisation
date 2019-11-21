@@ -22,6 +22,24 @@ def vhHadWeight(row, ratio):
       return ratio * weight
     else: return weight
 
+def truthVBF(row):
+    if row['HTXSstage1_1_cat']>206.5 and row['HTXSstage1_1_cat']<210.5: return 2
+    elif row['HTXSstage1_1_cat']>110.5 and row['HTXSstage1_1_cat']<113.5: return 1
+    elif row['HTXSstage1_1_cat']==0: return 0
+    else: return -1
+
+def vbfWeight(row, vbfSumW, gghSumW, bkgSumW):
+    weight = abs(row['weight'])
+    if row['proc'].count('qcd'): 
+        weight *= 0.04 
+    if row['sigmarv']>0. and row['sigmawv']>0.:
+        weight *= ( (row['vtxprob']/row['sigmarv']) + ((1.-row['vtxprob'])/row['sigmawv']) )
+    if row['truthVBF']==2: 
+      return (bkgSumW/vbfSumW) * weight
+    elif row['truthVBF']==1: 
+      return (bkgSumW/gghSumW) * weight
+    else: return weight
+
 def truthClass(row):
     if not row['HTXSstage1_1_cat']==0: return int(row['HTXSstage1_1_cat']-3)
     else: return 0

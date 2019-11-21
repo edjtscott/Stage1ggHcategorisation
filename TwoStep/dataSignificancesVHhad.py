@@ -69,6 +69,10 @@ if not opts.dataFrame:
   print 'done basic preselection cuts'
   dataTotal = dataTotal[dataTotal.dijet_LeadJPt>30.]
   dataTotal = dataTotal[dataTotal.dijet_SubJPt>30.]
+  dataTotal = dataTotal[dataTotal.dijet_leadEta>-2.4]
+  dataTotal = dataTotal[dataTotal.dijet_leadEta<2.4]
+  dataTotal = dataTotal[dataTotal.dijet_subleadEta>-2.4]
+  dataTotal = dataTotal[dataTotal.dijet_subleadEta<2.4]
   dataTotal = dataTotal[dataTotal.dijet_Mjj>60.]
   dataTotal = dataTotal[dataTotal.dijet_Mjj<120.]
   print 'done jet cuts'
@@ -87,11 +91,13 @@ vhHadX  = trainTotal[vhHadVars].values
 vhHadY  = trainTotal['truthVhHad'].values
 vhHadM  = trainTotal['dipho_mass'].values
 vhHadFW = trainTotal['weight'].values
+vhHadC  = trainTotal['cosThetaStar'].values
 
 dataDX = dataTotal[diphoVars].values
 dataX  = dataTotal[vhHadVars].values
 dataM  = dataTotal['dipho_mass'].values
 dataFW = np.ones(dataM.shape[0])
+dataC  = dataTotal['cosThetaStar'].values
 
 #evaluate dipho BDT scores
 diphoMatrix = xg.DMatrix(vhHadDX, label=vhHadY, weight=vhHadFW, feature_names=diphoVars)
@@ -123,6 +129,17 @@ optimiser = CatOptim(sigWeights, vhHadM, [vhHadV,vhHadD], bkgWeights, dataM, [da
 optimiser.setNonSig(nonWeights, vhHadM, [vhHadV,vhHadD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for VH hadronic bin are: \n'
+printStr += optimiser.getPrintableResult()
+
+ranges = [ [0.,1.] ]
+names  = ['DiphotonBDT']
+sigWeights = vhHadFW * (vhHadY>0.5) * (vhHadC<0.5) * (vhHadC>-0.5)
+bkgWeights = dataFW * (dataC<0.5) * (dataC>-0.5)
+nonWeights = vhHadFW * (vhHadY<0.5) * (vhHadC<0.5) * (vhHadC>-0.5)
+optimiser = CatOptim(sigWeights, vhHadM, [vhHadD], bkgWeights, dataM, [dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vhHadM, [vhHadD])
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results using ONLY diphoton BDT are: \n'
 printStr += optimiser.getPrintableResult()
 
 print

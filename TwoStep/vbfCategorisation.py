@@ -6,7 +6,7 @@ import uproot as upr
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
-from addRowFunctions import truthVhHad, vhHadWeight
+from addRowFunctions import truthVBF, vbfWeight
 
 #configure options
 from optparse import OptionParser
@@ -33,9 +33,9 @@ backgrounds = ['dipho','gjet_anyfake','qcd_anyfake']
 #define variables to be used
 allVars    = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
               'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'dipho_dijet_ptHjj', 'dijet_dipho_dphi_trunc',
-              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'HTXSstage1_1_cat', 'dipho_mass']
+              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'HTXSstage1_1_cat', 'dipho_mass', 'dijet_dphi', 'dijet_minDRJetPho', 'dijet_Zep']
 
-vhHadVars  = ['dipho_lead_ptoM', 'dipho_sublead_ptoM', 'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_Mjj', 'dijet_abs_dEta', 'cosThetaStar']
+dijetVars = ['dipho_lead_ptoM', 'dipho_sublead_ptoM', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_centrality', 'dijet_dphi', 'dijet_minDRJetPho', 'dijet_dipho_dphi_trunc']
 
 #either get existing data frame or create it
 trainTotal = None
@@ -68,29 +68,25 @@ if not opts.dataFrame:
   trainTotal = trainTotal[trainTotal.dipho_lead_ptoM>0.333]
   trainTotal = trainTotal[trainTotal.dipho_sublead_ptoM>0.25]
   print 'done basic preselection cuts'
-  trainTotal = trainTotal[trainTotal.dijet_LeadJPt>30.]
+  trainTotal = trainTotal[trainTotal.dijet_LeadJPt>40.]
   trainTotal = trainTotal[trainTotal.dijet_SubJPt>30.]
-  trainTotal = trainTotal[trainTotal.dijet_leadEta>-2.4]
-  trainTotal = trainTotal[trainTotal.dijet_subleadEta>-2.4]
-  trainTotal = trainTotal[trainTotal.dijet_leadEta<2.4]
-  trainTotal = trainTotal[trainTotal.dijet_subleadEta<2.4]
-  trainTotal = trainTotal[trainTotal.dijet_Mjj>60.]
-  trainTotal = trainTotal[trainTotal.dijet_Mjj<120.]
+  trainTotal = trainTotal[trainTotal.dijet_Mjj>250.]
   print 'done jet cuts'
 
   #add the target variable and the equalised weight
-  trainTotal['truthVhHad'] = trainTotal.apply(truthVhHad,axis=1)
-  sigSumW = np.sum(trainTotal[trainTotal.truthVhHad==1]['weight'].values)
-  bkgSumW = np.sum(trainTotal[trainTotal.truthVhHad==0]['weight'].values)
-  print 'sigSumW, bkgSumW, ratio = %.3f, %.3f, %.3f'%(sigSumW, bkgSumW, sigSumW/bkgSumW)
-  trainTotal['vhHadWeight'] = trainTotal.apply(vhHadWeight, axis=1, args=[bkgSumW/sigSumW])
-  #trainTotal = trainTotal[trainTotal.truthVhHad>-0.5] ## this is left over from when only training VH vs ggH
+  trainTotal['truthVBF'] = trainTotal.apply(truthVBF,axis=1)
+  trainTotal = trainTotal[trainTotal.truthVBF>-0.5]
+  vbfSumW = np.sum(trainTotal[trainTotal.truthVBF==2]['weight'].values)
+  gghSumW = np.sum(trainTotal[trainTotal.truthVBF==1]['weight'].values)
+  bkgSumW = np.sum(trainTotal[trainTotal.truthVBF==0]['weight'].values)
+  trainTotal['vbfWeight'] = trainTotal.apply(vbfWeight, axis=1, args=[vbfSumW,gghSumW,bkgSumW])
+  trainTotal['dijet_centrality']=np.exp(-4.*((trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2))
 
   #save as a pickle file
   if not path.isdir(frameDir): 
     system('mkdir -p %s'%frameDir)
-  trainTotal.to_pickle('%s/vhHadTotal.pkl'%frameDir)
-  print 'frame saved as %s/vhHadTotal.pkl'%frameDir
+  trainTotal.to_pickle('%s/vbfTotal.pkl'%frameDir)
+  print 'frame saved as %s/vbfTotal.pkl'%frameDir
 
 #read in dataframe if above steps done before
 else:
@@ -104,31 +100,33 @@ theShuffle = np.random.permutation(theShape)
 trainLimit = int(theShape*trainFrac)
 
 #define the values needed for training as numpy arrays
-vhHadX  = trainTotal[vhHadVars].values
-vhHadY  = trainTotal['truthVhHad'].values
-vhHadTW = trainTotal['vhHadWeight'].values
-vhHadFW = trainTotal['weight'].values
-vhHadM  = trainTotal['dipho_mass'].values
+vbfX  = trainTotal[dijetVars].values
+vbfY  = trainTotal['truthVBF'].values
+vbfTW = trainTotal['vbfWeight'].values
+vbfFW = trainTotal['weight'].values
+vbfM  = trainTotal['dipho_mass'].values
 
 #do the shuffle
-vhHadX  = vhHadX[theShuffle]
-vhHadY  = vhHadY[theShuffle]
-vhHadTW = vhHadTW[theShuffle]
-vhHadFW = vhHadFW[theShuffle]
-vhHadM  = vhHadM[theShuffle]
+vbfX  = vbfX[theShuffle]
+vbfY  = vbfY[theShuffle]
+vbfTW = vbfTW[theShuffle]
+vbfFW = vbfFW[theShuffle]
+vbfM  = vbfM[theShuffle]
 
 #split into train and test
-vhHadTrainX,  vhHadTestX  = np.split( vhHadX,  [trainLimit] )
-vhHadTrainY,  vhHadTestY  = np.split( vhHadY,  [trainLimit] )
-vhHadTrainTW, vhHadTestTW = np.split( vhHadTW, [trainLimit] )
-vhHadTrainFW, vhHadTestFW = np.split( vhHadFW, [trainLimit] )
-vhHadTrainM,  vhHadTestM  = np.split( vhHadM,  [trainLimit] )
+vbfTrainX,  vbfTestX  = np.split( vbfX,  [trainLimit] )
+vbfTrainY,  vbfTestY  = np.split( vbfY,  [trainLimit] )
+vbfTrainTW, vbfTestTW = np.split( vbfTW, [trainLimit] )
+vbfTrainFW, vbfTestFW = np.split( vbfFW, [trainLimit] )
+vbfTrainM,  vbfTestM  = np.split( vbfM,  [trainLimit] )
 
 #set up the training and testing matrices
-trainMatrix = xg.DMatrix(vhHadTrainX, label=vhHadTrainY, weight=vhHadTrainTW, feature_names=vhHadVars)
-testMatrix  = xg.DMatrix(vhHadTestX, label=vhHadTestY, weight=vhHadTestFW, feature_names=vhHadVars)
+trainMatrix = xg.DMatrix(vbfTrainX, label=vbfTrainY, weight=vbfTrainTW, feature_names=dijetVars)
+testMatrix  = xg.DMatrix(vbfTestX, label=vbfTestY, weight=vbfTestFW, feature_names=dijetVars)
 trainParams = {}
-trainParams['objective'] = 'binary:logistic'
+trainParams['objective'] = 'multi:softprob'
+numClasses = 3
+trainParams['num_class'] = numClasses
 trainParams['nthread'] = 1
 #trainParams['seed'] = 123456
 
@@ -145,29 +143,21 @@ if opts.trainParams:
 
 #train the BDT
 print 'about to train diphoton BDT'
-vhHadModel = xg.train(trainParams, trainMatrix)
+vbfModel = xg.train(trainParams, trainMatrix)
 print 'done'
 
 #save it
 modelDir = trainDir.replace('trees','models')
 if not path.isdir(modelDir):
   system('mkdir -p %s'%modelDir)
-vhHadModel.save_model('%s/vhHadModel%s.model'%(modelDir,paramExt))
-print 'saved as %s/vhHadModel%s.model'%(modelDir,paramExt)
+vbfModel.save_model('%s/vbfModel%s.model'%(modelDir,paramExt))
+print 'saved as %s/vbfModel%s.model'%(modelDir,paramExt)
 
 #evaluate performance using area under the ROC curve
-vhHadPredYtrain = vhHadModel.predict(trainMatrix)
-vhHadPredYtest  = vhHadModel.predict(testMatrix)
+vbfPredYtrain = vbfModel.predict(trainMatrix).reshape(vbfTrainY.shape[0],numClasses)
+vbfPredYtest  = vbfModel.predict(testMatrix).reshape(vbfTestY.shape[0],numClasses)
+vbfTruthYtrain = np.where(vbfTrainY==2, 0, 1)
+vbfTruthYtest  = np.where(vbfTestY==2, 0, 1)
 print 'Training performance:'
-print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vhHadTrainY, vhHadPredYtrain, sample_weight=vhHadTrainFW) )
-print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vhHadTestY,  vhHadPredYtest,  sample_weight=vhHadTestFW)  )
-
-#check yields for various working points
-testScale = 1./(1.-trainFrac)
-for cutVal in np.arange(0.1,0.96,0.05):
-  selectedSig = opts.intLumi * testScale * np.sum( vhHadTestFW * (vhHadTestY==1) * (vhHadPredYtest>cutVal) )
-  selectedBkg = opts.intLumi * testScale * np.sum( vhHadTestFW * (vhHadTestY==0) * (vhHadPredYtest>cutVal) )
-  print 'Selected events for a cut value of %.2f: S %.3f, B %.3f'%(cutVal, selectedSig, selectedBkg)
-  selectedSigWindow = opts.intLumi * testScale * np.sum( vhHadTestFW * (vhHadTestY==1) * (vhHadPredYtest>cutVal) * (vhHadTestM>123.) * (vhHadTestM<127.) )
-  selectedBkgWindow = opts.intLumi * testScale * np.sum( vhHadTestFW * (vhHadTestY==0) * (vhHadPredYtest>cutVal) * (vhHadTestM>123.) * (vhHadTestM<127.) )
-  print 'and applying a 2 GeV mass window w/%.2f: S %.3f, B %.3f'%(cutVal, selectedSigWindow, selectedBkgWindow)
+print 'area under roc curve for training set = %1.3f'%( 1.-roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
+print 'area under roc curve for test set     = %1.3f'%( 1.-roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )

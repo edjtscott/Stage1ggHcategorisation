@@ -55,6 +55,15 @@ dataFrame = None
 #dataFrame = 'dataTotal.pkl'
 sigFrame  = 'vhHadTotal.pkl'
 
+#script    = 'vbfCategorisation.py'
+#paramSets = [None]
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'vbfTotal.pkl'
+#dataFrame = None
+#sigFrame  = None
+
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']
 #models    = None
