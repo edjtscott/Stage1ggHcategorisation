@@ -36,24 +36,24 @@ intLumi = 41.5
 #dataFrame = None
 #sigFrame  = None
 
-script    = 'dataSignificancesVHhad.py'
-models    = ['altDiphoModel.model']
-classModel = None
-paramSets = [None]
-for params in paramSets:
-  if not params: continue
-  params = params.split(',')
-  name = 'diphoModel'
-  for param in params:
-    var = param.split(':')[0]
-    val = param.split(':')[1]
-    name += '__%s_%s'%(var,str(val))
-  name += '.model'
-  models.append(name)
-paramSets = None
-dataFrame = None
-#dataFrame = 'dataTotal.pkl'
-sigFrame  = 'vhHadTotal.pkl'
+#script    = 'dataSignificancesVHhad.py'
+#models    = ['altDiphoModel.model']
+#classModel = None
+#paramSets = [None]
+#for params in paramSets:
+#  if not params: continue
+#  params = params.split(',')
+#  name = 'diphoModel'
+#  for param in params:
+#    var = param.split(':')[0]
+#    val = param.split(':')[1]
+#    name += '__%s_%s'%(var,str(val))
+#  name += '.model'
+#  models.append(name)
+#paramSets = None
+#dataFrame = None
+##dataFrame = 'dataTotal.pkl'
+#sigFrame  = 'vhHadTotal.pkl'
 
 #script    = 'vbfCategorisation.py'
 #paramSets = [None]
@@ -63,6 +63,25 @@ sigFrame  = 'vhHadTotal.pkl'
 ##dataFrame = 'vbfTotal.pkl'
 #dataFrame = None
 #sigFrame  = None
+
+#script    = 'dataSignificancesVBFthree.py'
+#models    = ['altDiphoModel.model']
+#classModel = None
+#paramSets = [None]
+#for params in paramSets:
+#  if not params: continue
+#  params = params.split(',')
+#  name = 'diphoModel'
+#  for param in params:
+#    var = param.split(':')[0]
+#    val = param.split(':')[1]
+#    name += '__%s_%s'%(var,str(val))
+#  name += '.model'
+#  models.append(name)
+#paramSets = None
+#dataFrame = None
+##dataFrame = 'dataTotal.pkl'
+#sigFrame  = 'vbfTotal.pkl'
 
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']
