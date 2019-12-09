@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from os import system, path, getcwd
 from otherHelpers import submitJob
+from collections import OrderedDict as od
 
 dryRun = False
 #dryRun = True
@@ -10,13 +11,11 @@ runLocal = False
 
 myDir = getcwd()
 baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass2'
-#years = ['2016','2017']
-
-#years = ['2016']
-#intLumi = 35.9
-
-years = ['2017']
-intLumi = 41.5
+years = od()
+years['2016'] = 35.9
+years['2017'] = 41.5
+years['2018'] = 59.7
+years['all']  = 45.7
 
 #script    = 'diphotonCategorisation.py'
 #paramSets = [None]
@@ -162,17 +161,17 @@ intLumi = 41.5
 #sigFrame  = 'vbfTotal.pkl'
 
 if __name__=='__main__':
-  for year in years:
+  #for year in years:
+  for year,lumi in years.iteritems():
     jobDir = '%s/Jobs/%s/%s' % (myDir, script.replace('.py',''), year)
     if not path.isdir( jobDir ): system('mkdir -p %s'%jobDir)
     trainDir  = '%s/%s/trees'%(baseDir,year)
     theCmd = 'python %s -t %s '%(script, trainDir)
+    theCmd += '--intLumi %s '%lumi
     if dataFrame: 
       theCmd += '-d %s '%dataFrame
     if sigFrame: 
       theCmd += '-s %s '%sigFrame
-    if intLumi: 
-      theCmd += '--intLumi %s '%intLumi
     if classModel: 
       theCmd += '--className %s '%classModel
     if paramSets and models:

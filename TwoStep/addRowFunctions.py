@@ -25,8 +25,9 @@ def vhHadWeight(row, ratio):
 def truthVBF(row):
     if row['HTXSstage1_1_cat']>206.5 and row['HTXSstage1_1_cat']<210.5: return 2
     elif row['HTXSstage1_1_cat']>109.5 and row['HTXSstage1_1_cat']<113.5: return 1
-    elif row['HTXSstage1_1_cat']==0: return 0
-    else: return -1
+    else: return 0
+    #elif row['HTXSstage1_1_cat']==0: return 0
+    #else: return -1
 
 def vbfWeight(row, vbfSumW, gghSumW, bkgSumW):
     weight = abs(row['weight'])

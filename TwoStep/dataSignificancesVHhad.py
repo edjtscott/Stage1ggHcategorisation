@@ -27,15 +27,7 @@ frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
 
 #define the different sets of variables used
-allVars    = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
-              'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'dipho_dijet_ptHjj', 'dijet_dipho_dphi_trunc',
-              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'dipho_mass']
-
-diphoVars = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
-              'dijet_leadEta', 'dijet_subleadEta', 
-              'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv']
-
-vhHadVars  = ['dipho_lead_ptoM', 'dipho_sublead_ptoM', 'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_Mjj', 'dijet_abs_dEta', 'cosThetaStar']
+from variableDefinitions import allVarsData, diphoVars, vhHadVars
 
 #get trees from files, put them in data frames
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}
@@ -52,7 +44,7 @@ if not opts.dataFrame:
   for proc,fn in dataFileMap.iteritems():
     dataFile = upr.open('%s/%s'%(trainDir,fn))
     dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
-    dataFrames[proc] = dataTree.pandas.df(allVars)
+    dataFrames[proc] = dataTree.pandas.df(allVarsData)
     dataFrames[proc]['proc'] = proc
   print 'got trees'
 
@@ -92,6 +84,7 @@ vhHadY  = trainTotal['truthVhHad'].values
 vhHadM  = trainTotal['dipho_mass'].values
 vhHadFW = trainTotal['weight'].values
 vhHadC  = trainTotal['cosThetaStar'].values
+vhHadP  = trainTotal['HTXSstage1_1_cat'].values
 
 dataDX = dataTotal[diphoVars].values
 dataX  = dataTotal[vhHadVars].values
@@ -124,7 +117,7 @@ printStr = ''
 #configure the signal and background
 sigWeights = vhHadFW * (vhHadY>0.5)
 bkgWeights = dataFW
-nonWeights = vhHadFW * (vhHadY<0.5)
+nonWeights = vhHadFW * (vhHadP>100) * (vhHadP<114)
 optimiser = CatOptim(sigWeights, vhHadM, [vhHadV,vhHadD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
 optimiser.setNonSig(nonWeights, vhHadM, [vhHadV,vhHadD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -135,8 +128,7 @@ ranges = [ [0.,1.] ]
 names  = ['DiphotonBDT']
 sigWeights = vhHadFW * (vhHadY>0.5) * (vhHadC<0.5) * (vhHadC>-0.5)
 bkgWeights = dataFW * (dataC<0.5) * (dataC>-0.5)
-nonWeights = vhHadFW * (vhHadY<0.5) * (vhHadC<0.5) * (vhHadC>-0.5)
-#optimiser = CatOptim(sigWeights, vhHadM, [vhHadD], bkgWeights, dataM, [dataD], 1, ranges, names)
+nonWeights = vhHadFW * (vhHadP>100) * (vhHadP<114) * (vhHadC<0.5) * (vhHadC>-0.5)
 optimiser = CatOptim(sigWeights, vhHadM, [vhHadD], bkgWeights, dataM, [dataD], 2, ranges, names)
 optimiser.setNonSig(nonWeights, vhHadM, [vhHadD])
 optimiser.optimise(opts.intLumi, opts.nIterations)

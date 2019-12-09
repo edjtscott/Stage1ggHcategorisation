@@ -16,7 +16,8 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if it already exists')
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
 parser.add_option('-m','--modelName', default=None, help='Name of diphoton model for testing')
-parser.add_option('-n','--nIterations', default=10000, help='Number of iterations to run for random significance optimisation')
+#parser.add_option('-n','--nIterations', default=10000, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=5000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -27,15 +28,7 @@ frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
 
 #define the different sets of variables used
-allVars    = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
-              'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'dipho_dijet_ptHjj', 'dijet_dipho_dphi_trunc',
-              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'dipho_mass', 'dijet_dphi', 'dijet_minDRJetPho', 'dijet_Zep']
-
-diphoVars = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
-              'dijet_leadEta', 'dijet_subleadEta', 
-              'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv']
-
-dijetVars = ['dipho_lead_ptoM', 'dipho_sublead_ptoM', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_centrality', 'dijet_dphi', 'dijet_minDRJetPho', 'dijet_dipho_dphi_trunc']
+from variableDefinitions import allVarsData, diphoVars, dijetVars
 
 #get trees from files, put them in data frames
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}
@@ -52,7 +45,7 @@ if not opts.dataFrame:
   for proc,fn in dataFileMap.iteritems():
     dataFile = upr.open('%s/%s'%(trainDir,fn))
     dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
-    dataFrames[proc] = dataTree.pandas.df(allVars)
+    dataFrames[proc] = dataTree.pandas.df(allVarsData)
     dataFrames[proc]['proc'] = proc
   print 'got trees'
 
@@ -91,12 +84,16 @@ vbfP  = trainTotal['HTXSstage1_1_cat'].values
 vbfM  = trainTotal['dipho_mass'].values
 vbfFW = trainTotal['weight'].values
 vbfJ  = trainTotal['dijet_Mjj'].values
+vbfH  = trainTotal['dipho_pt'].values
+vbfHJ = trainTotal['dipho_dijet_ptHjj'].values
 
 dataDX = dataTotal[diphoVars].values
 dataX  = dataTotal[dijetVars].values
 dataM  = dataTotal['dipho_mass'].values
 dataFW = np.ones(dataM.shape[0])
 dataJ  = dataTotal['dijet_Mjj'].values
+dataH  = dataTotal['dipho_pt'].values
+dataHJ = dataTotal['dipho_dijet_ptHjj'].values
 
 #evaluate dipho BDT scores
 diphoMatrix = xg.DMatrix(vbfDX, label=vbfY, weight=vbfFW, feature_names=diphoVars)
@@ -131,28 +128,170 @@ ranges = [ [0.,1.], [0.,1.], [0.,1.] ]
 names  = ['VBFscore', 'GGHscore', 'DiphotonBDT']
 printStr = ''
 
-#configure the signal and background
-#sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.)
-#bkgWeights = dataFW * (dataJ>350.)
-#nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.)
-#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
-#optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
-#optimiser.setOpposite('GGHscore')
-#optimiser.optimise(opts.intLumi, opts.nIterations)
-#printStr += 'Results for VBF with two categories are: \n'
-#printStr += optimiser.getPrintableResult()
-#
-#sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.)
-#bkgWeights = dataFW * (dataJ>350.)
-#nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.)
-#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
-#optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
-#optimiser.setOpposite('GGHscore')
-#optimiser.optimise(opts.intLumi, opts.nIterations)
-#printStr += 'Results for VBF with three categories are: \n'
-#printStr += optimiser.getPrintableResult()
+## configure the signal and background for VBF
 
-#configure the signal and background
+## two categories inclusive
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.)
+bkgWeights = dataFW * (dataJ>350.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for VBF with two categories are: \n'
+printStr += optimiser.getPrintableResult()
+
+
+## three categories inclusive
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.)
+bkgWeights = dataFW * (dataJ>350.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for VBF with three categories are: \n'
+printStr += optimiser.getPrintableResult()
+
+
+## split by pT(Hjj) only, with BSM bin
+runningTotal = 0.
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfHJ<25.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataHJ<25.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfHJ<25.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF low pTHjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfHJ>25.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataHJ>25.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfHJ>25.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF high pTHjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfP==206) * (vbfJ>350.) * (vbfH>200.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH>200.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH>200.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF BSM bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+printStr += 'Which means that the total VBF significance for the pTHjj split plus BSM is : %1.3f \n\n\n'%np.sqrt(runningTotal)
+
+
+## split by mjj only, with BSM bin
+runningTotal = 0.
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ<700.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF low mjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>700.) * (vbfH<200.)
+bkgWeights = dataFW * (dataJ>700.) * (dataH<200.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>700.) * (vbfH<200.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF high mjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfP==206) * (vbfJ>350.) * (vbfH>200.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH>200.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH>200.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF BSM bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+printStr += 'Which means that the total VBF significance for the mjj split plus BSM is : %1.3f \n\n\n'%np.sqrt(runningTotal)
+
+
+## split by pT(Hjj) and mjj, with BSM bin
+runningTotal = 0.
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ<25.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ<700.) * (dataHJ<25.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ<25.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF low pTHjj, low mjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ>25.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ<700.) * (dataHJ>25.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ>25.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF high pTHjj, low mjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ<25.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ>700.) * (dataHJ<25.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ<25.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF low pTHjj, high mjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ>25.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ>700.) * (dataHJ>25.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ>25.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF high pTHjj, high mjj bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+sigWeights = vbfFW * (vbfP==206) * (vbfJ>350.) * (vbfH>200.)
+bkgWeights = dataFW * (dataJ>350.) * (dataH>200.)
+nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH>200.)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+optimiser.setOpposite('GGHscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for the VBF BSM bin are: \n'
+printStr += optimiser.getPrintableResult()
+runningTotal += optimiser.getBests().getTotSignif()**2
+
+printStr += 'Which means that the total VBF significance for the pTHjj and mjj splits, plus BSM is : %1.3f \n\n\n'%np.sqrt(runningTotal)
+
+
+## configure the signal and background for VBF-like ggH
+## test one inclusive cat here
 names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
 sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
 bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
@@ -161,7 +300,18 @@ optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dat
 optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
 optimiser.setOpposite('VBFscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for ggH 2J-like are: \n'
+printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
+printStr += optimiser.getPrintableResult()
+
+## test two inclusive cats here
+sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
+bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
+nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
+optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
+optimiser.setOpposite('VBFscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for ggH VBF-like with two inclusive categories are: \n'
 printStr += optimiser.getPrintableResult()
 
 print

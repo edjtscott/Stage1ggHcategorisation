@@ -31,11 +31,7 @@ signals     = ['ggh','vbf','vh']
 backgrounds = ['dipho','gjet_anyfake','qcd_anyfake']
 
 #define variables to be used
-allVars    = ['dipho_leadIDMVA', 'dipho_subleadIDMVA', 'dipho_lead_ptoM', 'dipho_sublead_ptoM',
-              'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_abs_dEta', 'dijet_Mjj', 'dijet_nj', 'dipho_dijet_ptHjj', 'dijet_dipho_dphi_trunc',
-              'cosThetaStar', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv', 'weight', 'HTXSstage1_1_cat', 'dipho_mass']
-
-vhHadVars  = ['dipho_lead_ptoM', 'dipho_sublead_ptoM', 'dijet_leadEta', 'dijet_subleadEta', 'dijet_LeadJPt', 'dijet_SubJPt', 'dijet_Mjj', 'dijet_abs_dEta', 'cosThetaStar']
+from variableDefinitions import allVarsGen, vhHadVars
 
 #either get existing data frame or create it
 trainTotal = None
@@ -47,7 +43,7 @@ if not opts.dataFrame:
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      trainFrames[proc] = trainTree.pandas.df(allVars)
+      trainFrames[proc] = trainTree.pandas.df(allVarsGen)
       trainFrames[proc]['proc'] = proc
   print 'got trees'
 
