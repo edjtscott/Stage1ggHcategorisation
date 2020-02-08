@@ -32,14 +32,16 @@ trainFrac = 0.7
 validFrac = 0.1
 
 #get trees from files, put them in data frames
-procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', #'tth':'powheg_ttH.root', 
+procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', #'tth':'powheg_ttH.root', 'vh':'powheg_VH.root',
                'dipho':'Dipho.root', 'gjet_anyfake':'GJet.root', 'qcd_anyfake':'QCD.root'}
 theProcs = procFileMap.keys()
+#signals     = ['ggh','vbf','tth','vh']
 signals     = ['ggh','vbf']
 backgrounds = ['dipho','gjet_anyfake','qcd_anyfake']
 
 #define the different sets of variables used
 from variableDefinitions import allVarsGen, diphoVars
+queryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.9) and (dipho_subleadIDMVA>-0.9) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25)'
 
 #either get existing data frame or create it
 trainTotal = None
@@ -51,7 +53,7 @@ if not opts.dataFrame:
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      trainFrames[proc] = trainTree.pandas.df(allVarsGen)
+      trainFrames[proc] = trainTree.pandas.df(allVarsGen).query(queryString)
       trainFrames[proc]['proc'] = proc
   print 'got trees'
   
@@ -63,16 +65,6 @@ if not opts.dataFrame:
   del trainFrames
   print 'created total frame'
   
-  #then filter out the events into only those with the phase space we are interested in
-  trainTotal = trainTotal[trainTotal.dipho_mass>100.]
-  trainTotal = trainTotal[trainTotal.dipho_mass<180.]
-  print 'done mass cuts'
-  trainTotal = trainTotal[trainTotal.dipho_leadIDMVA>-0.9]
-  trainTotal = trainTotal[trainTotal.dipho_subleadIDMVA>-0.9]
-  trainTotal = trainTotal[trainTotal.dipho_lead_ptoM>0.333]
-  trainTotal = trainTotal[trainTotal.dipho_sublead_ptoM>0.25]
-  print 'done basic preselection cuts'
-
   sigSumW = np.sum( trainTotal[trainTotal.HTXSstage1_1_cat>0.01]['weight'].values )
   bkgSumW = np.sum( trainTotal[trainTotal.HTXSstage1_1_cat==0]['weight'].values )
   weightRatio = bkgSumW/sigSumW

@@ -16,7 +16,7 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if it already exists')
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
 parser.add_option('-m','--modelName', default=None, help='Name of diphoton model for testing')
-parser.add_option('-n','--nIterations', default=2000, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=6000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -78,7 +78,7 @@ if not opts.dataFrame:
   print 'got trees'
 
   dataTotal = dataFrames['Data']
-
+  
   #add needed variables
   dataTotal['dijet_centrality']=np.exp(-4.*((dataTotal.dijet_Zep/dataTotal.dijet_abs_dEta)**2))
 
@@ -122,7 +122,7 @@ numClasses=3
 vbfMatrix = xg.DMatrix(vbfX, label=vbfY, weight=vbfFW, feature_names=dijetVars)
 dataMatrix  = xg.DMatrix(dataX,  label=dataFW, weight=dataFW,  feature_names=dijetVars)
 vbfModel = xg.Booster()
-vbfModel.load_model('%s/%s'%(modelDir,'vbfModel.model'))
+vbfModel.load_model('%s/%s'%(modelDir,'vbfDataDriven.model'))
 vbfPredictions = vbfModel.predict(vbfMatrix).reshape(vbfM.shape[0],numClasses)
 vbfV = vbfPredictions[:,2]
 vbfG = vbfPredictions[:,1]
@@ -249,7 +249,9 @@ runningTotal = 0.
 sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ<25.)
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ<700.) * (dataHJ<25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ<25.)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -260,7 +262,9 @@ runningTotal += optimiser.getBests().getTotSignif()**2
 sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ>25.)
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ<700.) * (dataHJ>25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ>25.)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -271,7 +275,9 @@ runningTotal += optimiser.getBests().getTotSignif()**2
 sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ<25.)
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ>700.) * (dataHJ<25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ<25.)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -282,7 +288,9 @@ runningTotal += optimiser.getBests().getTotSignif()**2
 sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ>25.)
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ>700.) * (dataHJ>25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ>25.)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -293,7 +301,9 @@ runningTotal += optimiser.getBests().getTotSignif()**2
 sigWeights = vbfFW * (vbfP==206) * (vbfJ>350.) * (vbfH>200.)
 bkgWeights = dataFW * (dataJ>350.) * (dataH>200.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH>200.)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -306,27 +316,27 @@ printStr += 'Which means that the total VBF significance for the pTHjj and mjj s
 
 ## configure the signal and background for VBF-like ggH
 ## test one inclusive cat here
-names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
-sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
-bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
-nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
-optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 1, ranges, names)
-optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
-optimiser.setOpposite('VBFscore')
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
-printStr += optimiser.getPrintableResult()
-
-## test two inclusive cats here
-sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
-bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
-nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
-optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 2, ranges, names)
-optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
-optimiser.setOpposite('VBFscore')
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for ggH VBF-like with two inclusive categories are: \n'
-printStr += optimiser.getPrintableResult()
+#names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
+#sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
+#bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
+#nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
+#optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 1, ranges, names)
+#optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
+#optimiser.setOpposite('VBFscore')
+#optimiser.optimise(opts.intLumi, opts.nIterations)
+#printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
+#printStr += optimiser.getPrintableResult()
+#
+### test two inclusive cats here
+#sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
+#bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
+#nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
+#optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 2, ranges, names)
+#optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
+#optimiser.setOpposite('VBFscore')
+#optimiser.optimise(opts.intLumi, opts.nIterations)
+#printStr += 'Results for ggH VBF-like with two inclusive categories are: \n'
+#printStr += optimiser.getPrintableResult()
 
 print
 print printStr

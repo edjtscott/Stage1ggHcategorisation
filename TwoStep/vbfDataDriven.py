@@ -7,6 +7,7 @@ import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
 from addRowFunctions import truthVBF, vbfWeight
+from os import listdir
 
 #configure options
 from optparse import OptionParser
@@ -23,12 +24,30 @@ if trainDir.endswith('/'): trainDir = trainDir[:-1]
 frameDir = trainDir.replace('trees','frames')
 if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 
+#including the full selection
+hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
+queryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2) and (dipho_subleadIDMVA>-0.2) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
+
+#define hdf input
+hdfDir = trainDir.replace('trees','hdfs')
+
+if hdfDir.count('all'):
+  hdfFrame = pd.read_hdf('%s/ThreeClass_with_DataDriven_2016.h5'%hdfDir).query(hdfQueryString)
+  hdfFrame.append( pd.read_hdf('%s/ThreeClass_with_DataDriven_2017.h5'%hdfDir).query(hdfQueryString) )
+  hdfFrame.append( pd.read_hdf('%s/ThreeClass_with_DataDriven_2018.h5'%hdfDir).query(hdfQueryString) )
+else:
+  hdfFrame = pd.read_hdf('%s/ThreeClass_with_DataDriven_%s.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
+
+hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
+hdfFrame['proc'] = 'datadriven'
+print 'ED DEBUG sum of datadriven weights %.3f'%np.sum(hdfFrame['weight'].values)
+
 #define input files
 procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'vh':'VH.root',
-               'dipho':'Dipho.root', 'gjet_anyfake':'GJet.root', 'qcd_anyfake':'QCD.root'}
+               'dipho':'Dipho.root'}
 theProcs = procFileMap.keys()
 signals     = ['ggh','vbf','vh']
-backgrounds = ['dipho','gjet_anyfake','qcd_anyfake']
+backgrounds = ['dipho']
 
 #define variables to be used
 from variableDefinitions import allVarsGen, dijetVars
@@ -39,35 +58,24 @@ if not opts.dataFrame:
   trainFrames = {}
   #get trees from files, put them in data frames
   for proc,fn in procFileMap.iteritems():
+      print 'reading in tree from file %s'%fn
       trainFile   = upr.open('%s/%s'%(trainDir,fn))
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      trainFrames[proc] = trainTree.pandas.df(allVarsGen)
+      trainFrames[proc] = trainTree.pandas.df(allVarsGen).query(queryString)
       trainFrames[proc]['proc'] = proc
-  print 'got trees'
+  print 'got trees and applied selections'
 
   #create one total frame
   trainList = []
   for proc in theProcs:
       trainList.append(trainFrames[proc])
-  trainTotal = pd.concat(trainList)
+  trainList.append(hdfFrame)
+  trainTotal = pd.concat(trainList, sort=False)
   del trainFrames
+  del hdfFrame
   print 'created total frame'
-
-  #then filter out the events into only those with the phase space we are interested in
-  trainTotal = trainTotal[trainTotal.dipho_mass>100.]
-  trainTotal = trainTotal[trainTotal.dipho_mass<180.]
-  print 'done mass cuts'
-  trainTotal = trainTotal[trainTotal.dipho_leadIDMVA>-0.2]
-  trainTotal = trainTotal[trainTotal.dipho_subleadIDMVA>-0.2]
-  trainTotal = trainTotal[trainTotal.dipho_lead_ptoM>0.333]
-  trainTotal = trainTotal[trainTotal.dipho_sublead_ptoM>0.25]
-  print 'done basic preselection cuts'
-  trainTotal = trainTotal[trainTotal.dijet_LeadJPt>40.]
-  trainTotal = trainTotal[trainTotal.dijet_SubJPt>30.]
-  trainTotal = trainTotal[trainTotal.dijet_Mjj>250.]
-  print 'done jet cuts'
 
   #add the target variable and the equalised weight
   trainTotal['truthVBF'] = trainTotal.apply(truthVBF,axis=1)
@@ -75,14 +83,15 @@ if not opts.dataFrame:
   vbfSumW = np.sum(trainTotal[trainTotal.truthVBF==2]['weight'].values)
   gghSumW = np.sum(trainTotal[trainTotal.truthVBF==1]['weight'].values)
   bkgSumW = np.sum(trainTotal[trainTotal.truthVBF==0]['weight'].values)
+  print 'ED DEBUG bkgSumW = %.3f'%bkgSumW
   trainTotal['vbfWeight'] = trainTotal.apply(vbfWeight, axis=1, args=[vbfSumW,gghSumW,bkgSumW])
   trainTotal['dijet_centrality']=np.exp(-4.*((trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2))
 
   #save as a pickle file
   if not path.isdir(frameDir): 
     system('mkdir -p %s'%frameDir)
-  trainTotal.to_pickle('%s/vbfTotal.pkl'%frameDir)
-  print 'frame saved as %s/vbfTotal.pkl'%frameDir
+  trainTotal.to_pickle('%s/vbfDataDriven.pkl'%frameDir)
+  print 'frame saved as %s/vbfDataDriven.pkl'%frameDir
 
 #read in dataframe if above steps done before
 else:
@@ -146,8 +155,8 @@ print 'done'
 modelDir = trainDir.replace('trees','models')
 if not path.isdir(modelDir):
   system('mkdir -p %s'%modelDir)
-vbfModel.save_model('%s/vbfModel%s.model'%(modelDir,paramExt))
-print 'saved as %s/vbfModel%s.model'%(modelDir,paramExt)
+vbfModel.save_model('%s/vbfDataDriven%s.model'%(modelDir,paramExt))
+print 'saved as %s/vbfDataDriven%s.model'%(modelDir,paramExt)
 
 #evaluate performance using area under the ROC curve
 vbfPredYtrain = vbfModel.predict(trainMatrix).reshape(vbfTrainY.shape[0],numClasses)

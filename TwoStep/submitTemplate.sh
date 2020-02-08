@@ -16,6 +16,8 @@ cd $TMPDIR
 mkdir -p scratch_$RAND
 cd scratch_$RAND
 cp -p $MYDIR/*.py .
+ulimit unlimited
+ulimit -s unlimited
 echo "About to run the following command:"
 echo $CMD
 if ( $CMD ) then

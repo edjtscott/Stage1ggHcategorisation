@@ -12,9 +12,9 @@ runLocal = False
 myDir = getcwd()
 baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass2'
 years = od()
-years['2016'] = 35.9
-years['2017'] = 41.5
-years['2018'] = 59.7
+#years['2016'] = 35.9
+#years['2017'] = 41.5
+#years['2018'] = 59.7
 years['all']  = 45.7
 
 #script    = 'diphotonCategorisation.py'
@@ -35,6 +35,15 @@ years['all']  = 45.7
 #dataFrame = None
 #sigFrame  = None
 
+#script    = 'vhHadDataDriven.py'
+#paramSets = [None]
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'vhHadDataDriven.pkl'
+#dataFrame = None
+#sigFrame  = None
+
 #script    = 'dataSignificancesVHhad.py'
 #models    = ['altDiphoModel.model']
 #classModel = None
@@ -51,8 +60,27 @@ years['all']  = 45.7
 #  models.append(name)
 #paramSets = None
 #dataFrame = None
-##dataFrame = 'dataTotal.pkl'
-#sigFrame  = 'vhHadTotal.pkl'
+##dataFrame = 'vhHadDataTotal.pkl'
+#sigFrame  = None
+
+#script    = 'dataSignificancesVHhadDataDriven.py'
+#models    = ['altDiphoModel.model']
+#classModel = None
+#paramSets = [None]
+#for params in paramSets:
+#  if not params: continue
+#  params = params.split(',')
+#  name = 'diphoModel'
+#  for param in params:
+#    var = param.split(':')[0]
+#    val = param.split(':')[1]
+#    name += '__%s_%s'%(var,str(val))
+#  name += '.model'
+#  models.append(name)
+#paramSets = None
+#dataFrame = None
+##dataFrame = 'vhHadDataTotal.pkl'
+#sigFrame  = None
 
 #script    = 'vbfCategorisation.py'
 #paramSets = [None]
@@ -60,6 +88,15 @@ years['all']  = 45.7
 #models    = None
 #classModel = None
 ##dataFrame = 'vbfTotal.pkl'
+#dataFrame = None
+#sigFrame  = None
+
+#script    = 'vbfDataDriven.py'
+#paramSets = [None]
+##paramSets = [None,'max_depth:3','max_depth:4','max_depth:5','max_depth:10','eta:0.1','eta:0.5','lambda:0']
+#models    = None
+#classModel = None
+##dataFrame = 'vbfDataDriven.pkl'
 #dataFrame = None
 #sigFrame  = None
 
@@ -78,9 +115,30 @@ years['all']  = 45.7
 #  name += '.model'
 #  models.append(name)
 #paramSets = None
-#dataFrame = None
-##dataFrame = 'dataTotal.pkl'
-#sigFrame  = 'vbfTotal.pkl'
+##dataFrame = None
+##dataFrame = 'vbfDataTotal.pkl'
+#dataFrame = 'dataTotal.pkl'
+#sigFrame  = None
+
+#script    = 'dataSignificancesVBFdatadriven.py'
+#models    = ['altDiphoModel.model']
+#classModel = None
+#paramSets = [None]
+#for params in paramSets:
+#  if not params: continue
+#  params = params.split(',')
+#  name = 'diphoModel'
+#  for param in params:
+#    var = param.split(':')[0]
+#    val = param.split(':')[1]
+#    name += '__%s_%s'%(var,str(val))
+#  name += '.model'
+#  models.append(name)
+#paramSets = None
+##dataFrame = None
+##dataFrame = 'vbfDataTotal.pkl'
+#dataFrame = 'dataTotal.pkl'
+#sigFrame  = None
 
 #script    = 'nJetCategorisation.py'
 #paramSets = [None,'max_depth:10']

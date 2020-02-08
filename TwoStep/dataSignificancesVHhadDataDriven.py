@@ -113,7 +113,7 @@ dataD  = diphoModel.predict(diphoDataMatrix)
 vhHadMatrix = xg.DMatrix(vhHadX, label=vhHadY, weight=vhHadFW, feature_names=vhHadVars)
 dataMatrix  = xg.DMatrix(dataX,  label=dataFW, weight=dataFW,  feature_names=vhHadVars)
 vhHadModel = xg.Booster()
-vhHadModel.load_model('%s/%s'%(modelDir,'vhHadModel.model'))
+vhHadModel.load_model('%s/%s'%(modelDir,'vhHadDataDriven.model'))
 vhHadV = vhHadModel.predict(vhHadMatrix)
 dataV  = vhHadModel.predict(dataMatrix)
 

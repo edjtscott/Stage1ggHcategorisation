@@ -12,7 +12,13 @@ def truthVhHad(row):
     #else: return -1
 
 def vhHadWeight(row, ratio):
-    weight = 1000. * abs(row['weight'])
+    weight = abs(row['weight'])
+    if row['HTXSstage1_1_cat']<106.5 and row['HTXSstage1_1_cat']>99.5: 
+        weight = 0.
+    elif row['HTXSstage1_1_cat']>108.5 and row['HTXSstage1_1_cat']<203.5: 
+        weight = 0.
+    elif row['HTXSstage1_1_cat']>204.5:
+        weight = 0.
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
     #now account for the resolution
@@ -31,6 +37,10 @@ def truthVBF(row):
 
 def vbfWeight(row, vbfSumW, gghSumW, bkgSumW):
     weight = abs(row['weight'])
+    if row['HTXSstage1_1_cat']<109.5 and row['HTXSstage1_1_cat']>99.5: 
+        weight = 0.
+    elif row['HTXSstage1_1_cat']<205.5 and row['HTXSstage1_1_cat']>199.5: 
+        weight = 0.
     if row['proc'].count('qcd'): 
         weight *= 0.04 
     if row['sigmarv']>0. and row['sigmawv']>0.:
