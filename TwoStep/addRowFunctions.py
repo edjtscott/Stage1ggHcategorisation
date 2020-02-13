@@ -2,22 +2,22 @@ def addPt(row):
     return row['CMS_hgg_mass']*row['diphoptom']
 
 def truthDipho(row):
-    if not row['HTXSstage1_1_cat']==0: return 1
+    if not row['HTXSstage1p1bin']==0: return 1
     else: return 0
 
 def truthVhHad(row):
-    if row['HTXSstage1_1_cat']==204: return 1
+    if row['HTXSstage1p1bin']==204: return 1
     else: return 0
-    #elif row['HTXSstage1_1_cat']>107 and row['HTXSstage1_1_cat']<111: return 0
+    #elif row['HTXSstage1p1bin']>107 and row['HTXSstage1p1bin']<111: return 0
     #else: return -1
 
 def vhHadWeight(row, ratio):
     weight = abs(row['weight'])
-    if row['HTXSstage1_1_cat']<106.5 and row['HTXSstage1_1_cat']>99.5: 
+    if row['HTXSstage1p1bin']<106.5 and row['HTXSstage1p1bin']>99.5: 
         weight = 0.
-    elif row['HTXSstage1_1_cat']>108.5 and row['HTXSstage1_1_cat']<203.5: 
+    elif row['HTXSstage1p1bin']>108.5 and row['HTXSstage1p1bin']<203.5: 
         weight = 0.
-    elif row['HTXSstage1_1_cat']>204.5:
+    elif row['HTXSstage1p1bin']>204.5:
         weight = 0.
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
@@ -29,17 +29,17 @@ def vhHadWeight(row, ratio):
     else: return weight
 
 def truthVBF(row):
-    if row['HTXSstage1_1_cat']>206.5 and row['HTXSstage1_1_cat']<210.5: return 2
-    elif row['HTXSstage1_1_cat']>109.5 and row['HTXSstage1_1_cat']<113.5: return 1
+    if row['HTXSstage1p1bin']>206.5 and row['HTXSstage1p1bin']<210.5: return 2
+    elif row['HTXSstage1p1bin']>109.5 and row['HTXSstage1p1bin']<113.5: return 1
     else: return 0
-    #elif row['HTXSstage1_1_cat']==0: return 0
+    #elif row['HTXSstage1p1bin']==0: return 0
     #else: return -1
 
 def vbfWeight(row, vbfSumW, gghSumW, bkgSumW):
     weight = abs(row['weight'])
-    if row['HTXSstage1_1_cat']<109.5 and row['HTXSstage1_1_cat']>99.5: 
+    if row['HTXSstage1p1bin']<109.5 and row['HTXSstage1p1bin']>99.5: 
         weight = 0.
-    elif row['HTXSstage1_1_cat']<205.5 and row['HTXSstage1_1_cat']>199.5: 
+    elif row['HTXSstage1p1bin']<205.5 and row['HTXSstage1p1bin']>199.5: 
         weight = 0.
     if row['proc'].count('qcd'): 
         weight *= 0.04 
@@ -52,13 +52,13 @@ def vbfWeight(row, vbfSumW, gghSumW, bkgSumW):
     else: return weight
 
 def truthClass(row):
-    if not row['HTXSstage1_1_cat']==0: return int(row['HTXSstage1_1_cat']-3)
+    if not row['HTXSstage1p1bin']==0: return int(row['HTXSstage1p1bin']-3)
     else: return 0
 
 def truthJets(row):
-    if row['HTXSstage1_1_cat']==3: return 0
-    elif row['HTXSstage1_1_cat']>=4 and row['HTXSstage1_1_cat']<=7: return 1
-    elif row['HTXSstage1_1_cat']>=8 and row['HTXSstage1_1_cat']<=11: return 2
+    if row['HTXSstage1p1bin']==3: return 0
+    elif row['HTXSstage1p1bin']>=4 and row['HTXSstage1p1bin']<=7: return 1
+    elif row['HTXSstage1p1bin']>=8 and row['HTXSstage1p1bin']<=11: return 2
     else: return -1
 
 def reco(row):
@@ -78,7 +78,7 @@ def diphoWeight(row, sigWeight=1.):
     weight = row['weight']
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
-    elif row['HTXSstage1_1_cat'] > 0.01:
+    elif row['HTXSstage1p1bin'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
@@ -119,10 +119,42 @@ def altDiphoWeight(row, weightRatio):
     weight = row['weight']
     if row['proc'].count('qcd'):
         weight *= 0.04 #downweight bc too few events
-    elif row['HTXSstage1_1_cat'] > 0.01:
+    elif row['HTXSstage1p1bin'] > 0.01:
         weight *= weightRatio #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
         weight *= ( (row['vtxprob']/row['sigmarv']) + ((1.-row['vtxprob'])/row['sigmawv']) )
     weight = abs(weight)
     return weight
+
+def cosThetaStar(row):
+    from ROOT import TLorentzVector as lv
+    from numpy import pi
+    leadPho = lv()
+    leadPho.SetPtEtaPhiM( row['dipho_lead_ptoM'] * row['dipho_mass'], row['dipho_leadEta'], row['dipho_leadPhi'], 0. )
+    subleadPho = lv()
+    subleadPho.SetPtEtaPhiM( row['dipho_sublead_ptoM'] * row['dipho_mass'], row['dipho_subleadEta'], row['dipho_subleadPhi'], 0. )
+
+    diphoSystem = leadPho + subleadPho
+
+    leadJet = lv()
+    leadJetPhi = row['dijet_leadDeltaPhi'] + diphoSystem.Phi()
+    if leadJetPhi > pi: leadJetPhi = leadJetPhi - 2.*pi
+    elif leadJetPhi < -1.*pi: leadJetPhi = leadJetPhi + 2.*pi
+    #print 'ED DEBUG leadJetPhi, dipho phi, deltaPhi = %.3f, %.3f, %.3f'%(leadJetPhi, diphoSystem.Phi(), row['dijet_leadDeltaPhi'])
+    leadJet.SetPtEtaPhiM( row['dijet_LeadJPt'], row['dijet_leadEta'], leadJetPhi, 0. )
+    subleadJet = lv()
+    subleadJetPhi = row['dijet_subleadDeltaPhi'] + diphoSystem.Phi()
+    if subleadJetPhi > pi: subleadJetPhi = subleadJetPhi - 2.*pi
+    elif subleadJetPhi < -1.*pi: subleadJetPhi = subleadJetPhi + 2.*pi
+    #print 'ED DEBUG subleadJetPhi, dipho phi, deltaPhi = %.3f, %.3f, %.3f'%(subleadJetPhi, diphoSystem.Phi(), row['dijet_subleadDeltaPhi'])
+    subleadJet.SetPtEtaPhiM( row['dijet_SubJPt'], row['dijet_subleadEta'], subleadJetPhi, 0. )
+
+    diphoDijetSystem = leadPho + subleadPho + leadJet + subleadJet
+
+    diphoSystem.Boost( -diphoDijetSystem.BoostVector() )
+
+    returnVal = -1. * diphoSystem.CosTheta()
+    #print 'ED DEBUG resulting cos theta star value is %.3f'%returnVal
+    
+    return returnVal

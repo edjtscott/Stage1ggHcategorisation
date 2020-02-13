@@ -10,12 +10,12 @@ runLocal = False
 #runLocal = True
 
 myDir = getcwd()
-baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass2'
+baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass3'
 years = od()
 #years['2016'] = 35.9
 #years['2017'] = 41.5
 #years['2018'] = 59.7
-years['all']  = 45.7
+years['all']  = 1.
 
 #script    = 'diphotonCategorisation.py'
 #paramSets = [None]
@@ -135,9 +135,8 @@ years['all']  = 45.7
 #  name += '.model'
 #  models.append(name)
 #paramSets = None
-##dataFrame = None
+#dataFrame = None
 ##dataFrame = 'vbfDataTotal.pkl'
-#dataFrame = 'dataTotal.pkl'
 #sigFrame  = None
 
 #script    = 'nJetCategorisation.py'

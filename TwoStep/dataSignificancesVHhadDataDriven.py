@@ -6,7 +6,7 @@ import uproot as upr
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
-from addRowFunctions import truthVhHad, vhHadWeight
+from addRowFunctions import truthVhHad, vhHadWeight, cosThetaStar
 from catOptim import CatOptim
 
 #configure options
@@ -16,7 +16,7 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if it already exists')
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
 parser.add_option('-m','--modelName', default=None, help='Name of diphoton model for testing')
-parser.add_option('-n','--nIterations', default=4000, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=5000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -27,7 +27,7 @@ frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
 
 #define the different sets of variables used
-from variableDefinitions import allVarsData, allVarsGen, diphoVars, vhHadVars
+from variableDefinitions import allVarsData, allVarsGen, allVarsDataOld, allVarsGenOld, diphoVars, vhHadVars, lumiDict
 
 #get trees from files, put them in data frames
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}
@@ -44,40 +44,77 @@ if opts.signalFrame:
   trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.signalFrame))
   print 'Successfully loaded the dataframe'
 else:
-  trainFrames = {}
+  trainList = []
   #get trees from files, put them in data frames
-  for proc,fn in procFileMap.iteritems():
+  if not 'all' in trainDir:
+    for proc,fn in procFileMap.iteritems():
       print 'reading in tree from file %s'%fn
       trainFile   = upr.open('%s/%s'%(trainDir,fn))
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      trainFrames[proc] = trainTree.pandas.df(allVarsGen).query(queryString)
-      trainFrames[proc]['proc'] = proc
+      if proc in ['vh','Data']:  
+          tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+          tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
+      else:
+          tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
+          tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+      tempFrame['proc'] = proc
+      trainList.append(tempFrame)
+  else:
+    for year in lumiDict.keys():
+      for proc,fn in procFileMap.iteritems():
+        thisDir = trainDir.replace('all',year)
+        print 'reading in tree from file %s'%fn
+        trainFile   = upr.open('%s/%s'%(thisDir,fn))
+        if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
+        elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+        else: raise Exception('Error did not recognise process %s !'%proc)
+        if proc in ['vh','Data']:  
+            tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+            tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
+        else:
+            tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
+            tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+        tempFrame['proc'] = proc
+        tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
+        trainList.append(tempFrame)
   print 'got trees and applied selections'
 
-  trainList = []
-  for proc in theProcs:
-      trainList.append(trainFrames[proc])
-  trainTotal = pd.concat(trainList)
-  del trainFrames
+  #create one total frame
+  trainTotal = pd.concat(trainList, sort=False)
+  del trainList
+  del tempFrame
   print 'created total frame'
 
   trainTotal['truthVhHad'] = trainTotal.apply(truthVhHad,axis=1)
 
 dataTotal = None
 if not opts.dataFrame:
-  dataFrames = {}
+  dataList = []
   #get the trees, turn them into arrays
-  for proc,fn in dataFileMap.iteritems():
-    dataFile = upr.open('%s/%s'%(trainDir,fn))
-    dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
-    dataFrames[proc] = dataTree.pandas.df(allVarsData).query(queryString)
-    dataFrames[proc]['proc'] = proc
+  if not 'all' in trainDir:
+    for proc,fn in dataFileMap.iteritems():
+      dataFile = upr.open('%s/%s'%(trainDir,fn))
+      dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+      tempData = dataTree.pandas.df(allVarsData).query(queryString)
+      tempData['proc'] = proc
+      tempData['cosThetaStar'] = tempData.apply(cosThetaStar, axis=1)
+      dataList.append(tempData)
+  else:
+    for year in lumiDict.keys():
+      for proc,fn in dataFileMap.iteritems():
+        thisDir = trainDir.replace('all',year)
+        dataFile = upr.open('%s/%s'%(thisDir,fn))
+        dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+        tempData = dataTree.pandas.df(allVarsData).query(queryString)
+        tempData['proc'] = proc
+        tempData['cosThetaStar'] = tempData.apply(cosThetaStar, axis=1)
+        dataList.append(tempData)
   print 'got trees'
 
-  dataTotal = dataFrames['Data']
-  
+  dataTotal = pd.concat(dataList)
+
   #save as a pickle file
   if not path.isdir(frameDir): 
     system('mkdir -p %s'%frameDir)
@@ -93,7 +130,7 @@ vhHadY  = trainTotal['truthVhHad'].values
 vhHadM  = trainTotal['dipho_mass'].values
 vhHadFW = trainTotal['weight'].values
 vhHadC  = trainTotal['cosThetaStar'].values
-vhHadP  = trainTotal['HTXSstage1_1_cat'].values
+vhHadP  = trainTotal['HTXSstage1p1bin'].values
 
 dataDX = dataTotal[diphoVars].values
 dataX  = dataTotal[vhHadVars].values

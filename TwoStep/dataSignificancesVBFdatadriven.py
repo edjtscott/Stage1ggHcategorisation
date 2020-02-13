@@ -6,7 +6,7 @@ import uproot as upr
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
-from addRowFunctions import truthVBF, vbfWeight
+from addRowFunctions import truthVBF, vbfWeight, cosThetaStar
 from catOptim import CatOptim
 
 #configure options
@@ -16,7 +16,7 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if it already exists')
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
 parser.add_option('-m','--modelName', default=None, help='Name of diphoton model for testing')
-parser.add_option('-n','--nIterations', default=6000, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=5000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -27,7 +27,7 @@ frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
 
 #define the different sets of variables used
-from variableDefinitions import allVarsData, allVarsGen, diphoVars, dijetVars
+from variableDefinitions import allVarsData, allVarsGen, allVarsDataOld, allVarsGenOld, diphoVars, dijetVars, lumiDict
 
 #get trees from files, put them in data frames
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}
@@ -44,23 +44,47 @@ if opts.signalFrame:
   trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.signalFrame))
   print 'Successfully loaded the dataframe'
 else:
-  trainFrames = {}
+  trainList = []
   #get trees from files, put them in data frames
-  for proc,fn in procFileMap.iteritems():
+  if not 'all' in trainDir:
+    for proc,fn in procFileMap.iteritems():
       print 'reading in tree from file %s'%fn
       trainFile   = upr.open('%s/%s'%(trainDir,fn))
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      trainFrames[proc] = trainTree.pandas.df(allVarsGen).query(queryString)
-      trainFrames[proc]['proc'] = proc
+      if proc in ['vh','Data']:  
+          tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+          tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
+      else:
+          tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
+          tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+      tempFrame['proc'] = proc
+      trainList.append(tempFrame)
+  else:
+    for year in lumiDict.keys():
+      for proc,fn in procFileMap.iteritems():
+        thisDir = trainDir.replace('all',year)
+        print 'reading in tree from file %s'%fn
+        trainFile   = upr.open('%s/%s'%(thisDir,fn))
+        if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
+        elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+        else: raise Exception('Error did not recognise process %s !'%proc)
+        if proc in ['vh','Data']:  
+            tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+            tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
+        else:
+            tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
+            tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+        tempFrame['proc'] = proc
+        tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
+        trainList.append(tempFrame)
   print 'got trees and applied selections'
 
-  trainList = []
-  for proc in theProcs:
-      trainList.append(trainFrames[proc])
-  trainTotal = pd.concat(trainList)
-  del trainFrames
+  #create one total frame
+  trainTotal = pd.concat(trainList, sort=False)
+  del trainList
+  del tempFrame
   print 'created total frame'
 
   trainTotal['truthVBF'] = trainTotal.apply(truthVBF,axis=1)
@@ -68,16 +92,27 @@ else:
 
 dataTotal = None
 if not opts.dataFrame:
-  dataFrames = {}
+  dataList = []
   #get the trees, turn them into arrays
-  for proc,fn in dataFileMap.iteritems():
-    dataFile = upr.open('%s/%s'%(trainDir,fn))
-    dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
-    dataFrames[proc] = dataTree.pandas.df(allVarsData).query(queryString)
-    dataFrames[proc]['proc'] = proc
+  if not 'all' in trainDir:
+    for proc,fn in dataFileMap.iteritems():
+      dataFile = upr.open('%s/%s'%(trainDir,fn))
+      dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+      tempData = dataTree.pandas.df(allVarsData).query(queryString)
+      tempData['proc'] = proc
+      dataList.append(tempData)
+  else:
+    for year in lumiDict.keys():
+      for proc,fn in dataFileMap.iteritems():
+        thisDir = trainDir.replace('all',year)
+        dataFile = upr.open('%s/%s'%(thisDir,fn))
+        dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+        tempData = dataTree.pandas.df(allVarsData).query(queryString)
+        tempData['proc'] = proc
+        dataList.append(tempData)
   print 'got trees'
 
-  dataTotal = dataFrames['Data']
+  dataTotal = pd.concat(dataList)
   
   #add needed variables
   dataTotal['dijet_centrality']=np.exp(-4.*((dataTotal.dijet_Zep/dataTotal.dijet_abs_dEta)**2))
@@ -94,7 +129,7 @@ else:
 vbfDX = trainTotal[diphoVars].values
 vbfX  = trainTotal[dijetVars].values
 vbfY  = trainTotal['truthVBF'].values
-vbfP  = trainTotal['HTXSstage1_1_cat'].values
+vbfP  = trainTotal['HTXSstage1p1bin'].values
 vbfM  = trainTotal['dipho_mass'].values
 vbfFW = trainTotal['weight'].values
 vbfJ  = trainTotal['dijet_Mjj'].values
@@ -250,8 +285,8 @@ sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfH
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ<700.) * (dataHJ<25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ<25.)
 #optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
-#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -263,8 +298,8 @@ sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfH
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ<700.) * (dataHJ>25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ<700.) * (vbfHJ>25.)
 #optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
-#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -276,8 +311,8 @@ sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfH
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ>700.) * (dataHJ<25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ<25.)
 #optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
-#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -289,8 +324,8 @@ sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfH
 bkgWeights = dataFW * (dataJ>350.) * (dataH<200.) * (dataJ>700.) * (dataHJ>25.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH<200.) * (vbfJ>700.) * (vbfHJ>25.)
 #optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
-#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -302,8 +337,8 @@ sigWeights = vbfFW * (vbfP==206) * (vbfJ>350.) * (vbfH>200.)
 bkgWeights = dataFW * (dataJ>350.) * (dataH>200.)
 nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfH>200.)
 #optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 1, ranges, names)
-#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
-optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
+optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 2, ranges, names)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 3, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
 optimiser.setOpposite('GGHscore')
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -316,27 +351,27 @@ printStr += 'Which means that the total VBF significance for the pTHjj and mjj s
 
 ## configure the signal and background for VBF-like ggH
 ## test one inclusive cat here
-#names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
-#sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
-#bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
-#nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
-#optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 1, ranges, names)
-#optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
-#optimiser.setOpposite('VBFscore')
-#optimiser.optimise(opts.intLumi, opts.nIterations)
-#printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
-#printStr += optimiser.getPrintableResult()
-#
+names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
+sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
+bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
+nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
+optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 1, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
+optimiser.setOpposite('VBFscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
+printStr += optimiser.getPrintableResult()
+
 ### test two inclusive cats here
-#sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
-#bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
-#nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
-#optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 2, ranges, names)
-#optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
-#optimiser.setOpposite('VBFscore')
-#optimiser.optimise(opts.intLumi, opts.nIterations)
-#printStr += 'Results for ggH VBF-like with two inclusive categories are: \n'
-#printStr += optimiser.getPrintableResult()
+sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
+bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
+nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
+optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 2, ranges, names)
+optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
+optimiser.setOpposite('VBFscore')
+optimiser.optimise(opts.intLumi, opts.nIterations)
+printStr += 'Results for ggH VBF-like with two inclusive categories are: \n'
+printStr += optimiser.getPrintableResult()
 
 print
 print printStr

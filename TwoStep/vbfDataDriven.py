@@ -6,7 +6,7 @@ import uproot as upr
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
-from addRowFunctions import truthVBF, vbfWeight
+from addRowFunctions import truthVBF, vbfWeight, cosThetaStar
 from os import listdir
 
 #configure options
@@ -24,6 +24,9 @@ if trainDir.endswith('/'): trainDir = trainDir[:-1]
 frameDir = trainDir.replace('trees','frames')
 if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 
+#define variables to be used
+from variableDefinitions import allVarsGen, dijetVars, allVarsGenOld, lumiDict
+
 #including the full selection
 hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
 queryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2) and (dipho_subleadIDMVA>-0.2) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
@@ -31,50 +34,76 @@ queryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2
 #define hdf input
 hdfDir = trainDir.replace('trees','hdfs')
 
+hdfList = []
 if hdfDir.count('all'):
-  hdfFrame = pd.read_hdf('%s/ThreeClass_with_DataDriven_2016.h5'%hdfDir).query(hdfQueryString)
-  hdfFrame.append( pd.read_hdf('%s/ThreeClass_with_DataDriven_2017.h5'%hdfDir).query(hdfQueryString) )
-  hdfFrame.append( pd.read_hdf('%s/ThreeClass_with_DataDriven_2018.h5'%hdfDir).query(hdfQueryString) )
+  for year in lumiDict.keys():
+    tempHdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM.h5'%(hdfDir,year)).query(hdfQueryString)
+    tempHdfFrame = tempHdfFrame[tempHdfFrame['sample']=='QCD']
+    tempHdfFrame.loc[:, 'weight'] = tempHdfFrame['weight'] * lumiDict[year]
+    tempHdfFrame['HTXSstage1p1bin'] = 0
+    hdfList.append(tempHdfFrame)
+  hdfFrame = pd.concat(hdfList, sort=False)
 else:
   hdfFrame = pd.read_hdf('%s/ThreeClass_with_DataDriven_%s.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
+  hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
+  hdfFrame['HTXSstage1p1bin'] = 0
 
-hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
 hdfFrame['proc'] = 'datadriven'
 print 'ED DEBUG sum of datadriven weights %.3f'%np.sum(hdfFrame['weight'].values)
 
 #define input files
-procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'vh':'VH.root',
+procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'vh':'powheg_VH.root',
                'dipho':'Dipho.root'}
 theProcs = procFileMap.keys()
 signals     = ['ggh','vbf','vh']
 backgrounds = ['dipho']
 
-#define variables to be used
-from variableDefinitions import allVarsGen, dijetVars
-
 #either get existing data frame or create it
 trainTotal = None
 if not opts.dataFrame:
-  trainFrames = {}
+  trainList = []
   #get trees from files, put them in data frames
-  for proc,fn in procFileMap.iteritems():
+  if not 'all' in trainDir:
+    for proc,fn in procFileMap.iteritems():
       print 'reading in tree from file %s'%fn
       trainFile   = upr.open('%s/%s'%(trainDir,fn))
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      trainFrames[proc] = trainTree.pandas.df(allVarsGen).query(queryString)
-      trainFrames[proc]['proc'] = proc
+      if proc in signals:  
+          tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+          tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
+      elif proc in backgrounds:  
+          tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
+          tempFrame['HTXSstage1p1bin'] = 0
+      tempFrame['proc'] = proc
+      trainList.append(tempFrame)
+  else:
+    for year in lumiDict.keys():
+      for proc,fn in procFileMap.iteritems():
+        thisDir = trainDir.replace('all',year)
+        print 'reading in tree from file %s'%fn
+        trainFile   = upr.open('%s/%s'%(thisDir,fn))
+        if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
+        elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+        else: raise Exception('Error did not recognise process %s !'%proc)
+        if proc in signals:  
+            tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+            tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
+        elif proc in backgrounds:  
+            tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
+            tempFrame['HTXSstage1p1bin'] = 0
+        tempFrame['proc'] = proc
+        tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
+        trainList.append(tempFrame)
   print 'got trees and applied selections'
 
   #create one total frame
-  trainList = []
-  for proc in theProcs:
-      trainList.append(trainFrames[proc])
   trainList.append(hdfFrame)
   trainTotal = pd.concat(trainList, sort=False)
-  del trainFrames
+  del trainList
   del hdfFrame
+  del tempFrame
   print 'created total frame'
 
   #add the target variable and the equalised weight
