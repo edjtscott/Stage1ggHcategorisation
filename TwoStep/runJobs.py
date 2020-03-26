@@ -10,7 +10,7 @@ runLocal = False
 #runLocal = True
 
 myDir = getcwd()
-baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass3'
+baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass5'
 years = od()
 #years['2016'] = 35.9
 #years['2017'] = 41.5

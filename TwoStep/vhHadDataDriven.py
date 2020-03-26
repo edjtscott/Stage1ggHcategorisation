@@ -6,7 +6,7 @@ import uproot as upr
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
-from addRowFunctions import truthVhHad, vhHadWeight, cosThetaStar
+from addRowFunctions import truthVhHad, truthVhHadForWeights, vhHadWeight, cosThetaStar
 
 #configure options
 from optparse import OptionParser
@@ -24,7 +24,7 @@ frameDir = trainDir.replace('trees','frames')
 if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 
 #define variables to be used
-from variableDefinitions import allVarsGen, vhHadVars, allVarsGenOld, lumiDict
+from variableDefinitions import allVarsGen, vhHadVars, lumiDict
 
 #including the full selection
 hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>30.) and (dijet_SubJPt>30.) and (dijet_Mjj>60.) and (dijet_Mjj<120.) and (dijet_leadEta>-2.4) and (dijet_subleadEta>-2.4) and (dijet_leadEta<2.4) and (dijet_subleadEta<2.4)'
@@ -36,16 +36,16 @@ hdfDir = trainDir.replace('trees','hdfs')
 hdfList = []
 if hdfDir.count('all'):
   for year in lumiDict.keys():
-    tempHdfFrame = pd.read_hdf('%s/VH_with_DataDriven_%s_MERGEDFF_NORM.h5'%(hdfDir,year)).query(hdfQueryString)
+    tempHdfFrame = pd.read_hdf('%s/VH_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,year)).query(hdfQueryString)
     tempHdfFrame = tempHdfFrame[tempHdfFrame['sample']=='QCD']
     tempHdfFrame.loc[:, 'weight'] = tempHdfFrame['weight'] * lumiDict[year]
-    tempHdfFrame['HTXSstage1p1bin'] = 0
+    #tempHdfFrame['HTXSstage1p2bin'] = 0
     hdfList.append(tempHdfFrame)
   hdfFrame = pd.concat(hdfList, sort=False)
 else:
-  hdfFrame = pd.read_hdf('%s/VH_with_DataDriven_%s_MERGEDFF_NORM.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
+  hdfFrame = pd.read_hdf('%s/VH_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
   hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
-  hdfFrame['HTXSstage1p1bin'] = 0
+  #hdfFrame['HTXSstage1p2bin'] = 0
 
 hdfFrame['proc'] = 'datadriven'
 print 'ED DEBUG sum of datadriven weights %.3f'%np.sum(hdfFrame['weight'].values)
@@ -69,12 +69,7 @@ if not opts.dataFrame:
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      if proc in signals:  
-          tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-          tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-      elif proc in backgrounds:  
-          tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-          tempFrame['HTXSstage1p1bin'] = 0
+      tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
       tempFrame['proc'] = proc
       trainList.append(tempFrame)
   else:
@@ -86,12 +81,7 @@ if not opts.dataFrame:
         if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
         elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
         else: raise Exception('Error did not recognise process %s !'%proc)
-        if proc in signals:  
-            tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-            tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-        elif proc in backgrounds:  
-            tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-            tempFrame['HTXSstage1p1bin'] = 0
+        tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
         tempFrame['proc'] = proc
         tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
         trainList.append(tempFrame)
@@ -107,11 +97,14 @@ if not opts.dataFrame:
 
   #add the target variable and the equalised weight
   trainTotal['truthVhHad'] = trainTotal.apply(truthVhHad,axis=1)
-  sigSumW = np.sum(trainTotal[trainTotal.truthVhHad==1]['weight'].values)
-  bkgSumW = np.sum(trainTotal[trainTotal.truthVhHad==0]['weight'].values)
+  trainTotal['truthVhHadForWeights'] = trainTotal.apply(truthVhHadForWeights,axis=1)
+  #sigSumW = np.sum(trainTotal[trainTotal.truthVhHad==1]['weight'].values)
+  #bkgSumW = np.sum(trainTotal[trainTotal.truthVhHad==0]['weight'].values)
+  sigSumW = np.sum(trainTotal[trainTotal.truthVhHadForWeights==2]['weight'].values)
+  gghSumW = np.sum(trainTotal[trainTotal.truthVhHadForWeights==1]['weight'].values)
+  bkgSumW = np.sum(trainTotal[trainTotal.truthVhHadForWeights==0]['weight'].values)
   print 'sigSumW, bkgSumW, ratio = %.3f, %.3f, %.3f'%(sigSumW, bkgSumW, sigSumW/bkgSumW)
-  trainTotal['vhHadWeight'] = trainTotal.apply(vhHadWeight, axis=1, args=[bkgSumW/sigSumW])
-  #trainTotal = trainTotal[trainTotal.truthVhHad>-0.5] ## this is left over from when only training VH vs ggH
+  trainTotal['vhHadWeight'] = trainTotal.apply(vhHadWeight, axis=1, args=[2.*bkgSumW/sigSumW,bkgSumW/gghSumW])
 
   #save as a pickle file
   if not path.isdir(frameDir): 

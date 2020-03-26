@@ -27,7 +27,7 @@ frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
 
 #define the different sets of variables used
-from variableDefinitions import allVarsData, allVarsGen, allVarsDataOld, allVarsGenOld, diphoVars, dijetVars, lumiDict
+from variableDefinitions import allVarsData, allVarsGen, diphoVars, dijetVars, lumiDict
 
 #get trees from files, put them in data frames
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}
@@ -53,12 +53,7 @@ else:
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      if proc in ['vh','Data']:  
-          tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-          tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-      else:
-          tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-          tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+      tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
       tempFrame['proc'] = proc
       trainList.append(tempFrame)
   else:
@@ -70,12 +65,7 @@ else:
         if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
         elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
         else: raise Exception('Error did not recognise process %s !'%proc)
-        if proc in ['vh','Data']:  
-            tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-            tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-        else:
-            tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-            tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+        tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
         tempFrame['proc'] = proc
         tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
         trainList.append(tempFrame)
@@ -129,7 +119,7 @@ else:
 vbfDX = trainTotal[diphoVars].values
 vbfX  = trainTotal[dijetVars].values
 vbfY  = trainTotal['truthVBF'].values
-vbfP  = trainTotal['HTXSstage1p1bin'].values
+vbfP  = trainTotal['HTXSstage1p2bin'].values
 vbfM  = trainTotal['dipho_mass'].values
 vbfFW = trainTotal['weight'].values
 vbfJ  = trainTotal['dijet_Mjj'].values
@@ -352,9 +342,9 @@ printStr += 'Which means that the total VBF significance for the pTHjj and mjj s
 ## configure the signal and background for VBF-like ggH
 ## test one inclusive cat here
 names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
-sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
+sigWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfV<0.4)
 bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
-nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
+nonWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfV<0.4) 
 optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 1, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
 optimiser.setOpposite('VBFscore')
@@ -363,9 +353,9 @@ printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
 printStr += optimiser.getPrintableResult()
 
 ### test two inclusive cats here
-sigWeights = vbfFW * (vbfP>109.5) * (vbfP<113.5) * (vbfJ>350.) * (vbfV<0.4)
+sigWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfV<0.4)
 bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
-nonWeights = vbfFW * (vbfP>206.5) * (vbfP<211.5) * (vbfJ>350.) * (vbfV<0.4) 
+nonWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfV<0.4) 
 optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 2, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
 optimiser.setOpposite('VBFscore')

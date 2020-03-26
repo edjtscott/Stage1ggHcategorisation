@@ -2,44 +2,45 @@ def addPt(row):
     return row['CMS_hgg_mass']*row['diphoptom']
 
 def truthDipho(row):
-    if not row['HTXSstage1p1bin']==0: return 1
+    if not row['HTXSstage1p2bin']==0: return 1
     else: return 0
 
 def truthVhHad(row):
-    if row['HTXSstage1p1bin']==204: return 1
+    if row['HTXSstage1p2bin']==204: return 1
     else: return 0
-    #elif row['HTXSstage1p1bin']>107 and row['HTXSstage1p1bin']<111: return 0
-    #else: return -1
 
-def vhHadWeight(row, ratio):
+def truthVhHadForWeights(row):
+    if row['HTXSstage1p2bin']==204: return 2
+    elif row['HTXSstage1p2bin']>99.5 and row['HTXSstage1p2bin']<116.5: return 1
+    else: return 0
+
+def vhHadWeight(row, vhRatio, gghRatio):
     weight = abs(row['weight'])
-    if row['HTXSstage1p1bin']<106.5 and row['HTXSstage1p1bin']>99.5: 
+    if row['HTXSstage1p2bin']>199.5 and row['HTXSstage1p2bin']<203.5: 
         weight = 0.
-    elif row['HTXSstage1p1bin']>108.5 and row['HTXSstage1p1bin']<203.5: 
-        weight = 0.
-    elif row['HTXSstage1p1bin']>204.5:
+    elif row['HTXSstage1p2bin']>204.5:
         weight = 0.
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
         weight *= ( (row['vtxprob']/row['sigmarv']) + ((1.-row['vtxprob'])/row['sigmawv']) )
-    if row['truthVhHad']==1: 
-      return ratio * weight
+    if row['truthVhHadForWeights']==2: 
+      return vhRatio * weight
+    elif row['truthVhHadForWeights']==1: 
+      return gghRatio * weight
     else: return weight
 
 def truthVBF(row):
-    if row['HTXSstage1p1bin']>206.5 and row['HTXSstage1p1bin']<210.5: return 2
-    elif row['HTXSstage1p1bin']>109.5 and row['HTXSstage1p1bin']<113.5: return 1
+    if row['HTXSstage1p2bin']>206.5 and row['HTXSstage1p2bin']<210.5: return 2
+    elif row['HTXSstage1p2bin']>112.5 and row['HTXSstage1p2bin']<116.5: return 1
     else: return 0
-    #elif row['HTXSstage1p1bin']==0: return 0
-    #else: return -1
 
 def vbfWeight(row, vbfSumW, gghSumW, bkgSumW):
     weight = abs(row['weight'])
-    if row['HTXSstage1p1bin']<109.5 and row['HTXSstage1p1bin']>99.5: 
+    if row['HTXSstage1p2bin']>99.5 and row['HTXSstage1p2bin']<112.5: 
         weight = 0.
-    elif row['HTXSstage1p1bin']<205.5 and row['HTXSstage1p1bin']>199.5: 
+    elif row['HTXSstage1p2bin']>199.5 and row['HTXSstage1p2bin']<206.5: 
         weight = 0.
     if row['proc'].count('qcd'): 
         weight *= 0.04 
@@ -52,13 +53,13 @@ def vbfWeight(row, vbfSumW, gghSumW, bkgSumW):
     else: return weight
 
 def truthClass(row):
-    if not row['HTXSstage1p1bin']==0: return int(row['HTXSstage1p1bin']-3)
+    if not row['HTXSstage1p2bin']==0: return int(row['HTXSstage1p2bin']-3)
     else: return 0
 
 def truthJets(row):
-    if row['HTXSstage1p1bin']==3: return 0
-    elif row['HTXSstage1p1bin']>=4 and row['HTXSstage1p1bin']<=7: return 1
-    elif row['HTXSstage1p1bin']>=8 and row['HTXSstage1p1bin']<=11: return 2
+    if row['HTXSstage1p2bin']==3: return 0
+    elif row['HTXSstage1p2bin']>=4 and row['HTXSstage1p2bin']<=7: return 1
+    elif row['HTXSstage1p2bin']>=8 and row['HTXSstage1p2bin']<=11: return 2
     else: return -1
 
 def reco(row):
@@ -78,7 +79,7 @@ def diphoWeight(row, sigWeight=1.):
     weight = row['weight']
     if row['proc'].count('qcd'): 
         weight *= 0.04 #downweight bc too few events
-    elif row['HTXSstage1p1bin'] > 0.01:
+    elif row['HTXSstage1p2bin'] > 0.01:
         weight *= sigWeight #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:
@@ -119,7 +120,7 @@ def altDiphoWeight(row, weightRatio):
     weight = row['weight']
     if row['proc'].count('qcd'):
         weight *= 0.04 #downweight bc too few events
-    elif row['HTXSstage1p1bin'] > 0.01:
+    elif row['HTXSstage1p2bin'] > 0.01:
         weight *= weightRatio #arbitrary change in signal weight, to be optimised
     #now account for the resolution
     if row['sigmarv']>0. and row['sigmawv']>0.:

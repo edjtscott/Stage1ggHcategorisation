@@ -25,7 +25,7 @@ frameDir = trainDir.replace('trees','frames')
 if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 
 #define variables to be used
-from variableDefinitions import allVarsGen, dijetVars, allVarsGenOld, lumiDict
+from variableDefinitions import allVarsGen, dijetVars, lumiDict
 
 #including the full selection
 hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
@@ -37,16 +37,16 @@ hdfDir = trainDir.replace('trees','hdfs')
 hdfList = []
 if hdfDir.count('all'):
   for year in lumiDict.keys():
-    tempHdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM.h5'%(hdfDir,year)).query(hdfQueryString)
+    tempHdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,year)).query(hdfQueryString)
     tempHdfFrame = tempHdfFrame[tempHdfFrame['sample']=='QCD']
     tempHdfFrame.loc[:, 'weight'] = tempHdfFrame['weight'] * lumiDict[year]
-    tempHdfFrame['HTXSstage1p1bin'] = 0
+    #tempHdfFrame['HTXSstage1p2bin'] = 0
     hdfList.append(tempHdfFrame)
   hdfFrame = pd.concat(hdfList, sort=False)
 else:
-  hdfFrame = pd.read_hdf('%s/ThreeClass_with_DataDriven_%s.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
+  hdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
   hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
-  hdfFrame['HTXSstage1p1bin'] = 0
+  #hdfFrame['HTXSstage1p2bin'] = 0
 
 hdfFrame['proc'] = 'datadriven'
 print 'ED DEBUG sum of datadriven weights %.3f'%np.sum(hdfFrame['weight'].values)
@@ -70,12 +70,7 @@ if not opts.dataFrame:
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      if proc in signals:  
-          tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-          tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-      elif proc in backgrounds:  
-          tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-          tempFrame['HTXSstage1p1bin'] = 0
+      tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
       tempFrame['proc'] = proc
       trainList.append(tempFrame)
   else:
@@ -87,12 +82,7 @@ if not opts.dataFrame:
         if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
         elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
         else: raise Exception('Error did not recognise process %s !'%proc)
-        if proc in signals:  
-            tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-            tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-        elif proc in backgrounds:  
-            tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-            tempFrame['HTXSstage1p1bin'] = 0
+        tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
         tempFrame['proc'] = proc
         tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
         trainList.append(tempFrame)

@@ -27,7 +27,7 @@ frameDir = trainDir.replace('trees','frames')
 modelDir = trainDir.replace('trees','models')
 
 #define the different sets of variables used
-from variableDefinitions import allVarsData, allVarsGen, allVarsDataOld, allVarsGenOld, diphoVars, vhHadVars, lumiDict
+from variableDefinitions import allVarsData, allVarsGen, diphoVars, vhHadVars, lumiDict
 
 #get trees from files, put them in data frames
 procFileMap = {'ggh':'ggH.root', 'vbf':'VBF.root', 'vh':'VH.root'}
@@ -53,12 +53,7 @@ else:
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      if proc in ['vh','Data']:  
-          tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-          tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-      else:
-          tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-          tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+      tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
       tempFrame['proc'] = proc
       trainList.append(tempFrame)
   else:
@@ -70,12 +65,7 @@ else:
         if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
         elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
         else: raise Exception('Error did not recognise process %s !'%proc)
-        if proc in ['vh','Data']:  
-            tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
-            tempFrame['cosThetaStar'] = tempFrame.apply(cosThetaStar, axis=1)
-        else:
-            tempFrame = trainTree.pandas.df(allVarsGenOld).query(queryString)
-            tempFrame['HTXSstage1p1bin'] = tempFrame['HTXSstage1_1_cat']
+        tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
         tempFrame['proc'] = proc
         tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
         trainList.append(tempFrame)
@@ -99,7 +89,6 @@ if not opts.dataFrame:
       dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       tempData = dataTree.pandas.df(allVarsData).query(queryString)
       tempData['proc'] = proc
-      tempData['cosThetaStar'] = tempData.apply(cosThetaStar, axis=1)
       dataList.append(tempData)
   else:
     for year in lumiDict.keys():
@@ -109,7 +98,6 @@ if not opts.dataFrame:
         dataTree = dataFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
         tempData = dataTree.pandas.df(allVarsData).query(queryString)
         tempData['proc'] = proc
-        tempData['cosThetaStar'] = tempData.apply(cosThetaStar, axis=1)
         dataList.append(tempData)
   print 'got trees'
 
@@ -130,7 +118,7 @@ vhHadY  = trainTotal['truthVhHad'].values
 vhHadM  = trainTotal['dipho_mass'].values
 vhHadFW = trainTotal['weight'].values
 vhHadC  = trainTotal['cosThetaStar'].values
-vhHadP  = trainTotal['HTXSstage1p1bin'].values
+vhHadP  = trainTotal['HTXSstage1p2bin'].values
 
 dataDX = dataTotal[diphoVars].values
 dataX  = dataTotal[vhHadVars].values
@@ -163,7 +151,7 @@ printStr = ''
 #configure the signal and background
 sigWeights = vhHadFW * (vhHadY>0.5)
 bkgWeights = dataFW
-nonWeights = vhHadFW * (vhHadP>100) * (vhHadP<114)
+nonWeights = vhHadFW * (vhHadP>99.5) * (vhHadP<116.5)
 optimiser = CatOptim(sigWeights, vhHadM, [vhHadV,vhHadD], bkgWeights, dataM, [dataV,dataD], 2, ranges, names)
 optimiser.setNonSig(nonWeights, vhHadM, [vhHadV,vhHadD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
@@ -174,7 +162,7 @@ ranges = [ [0.,1.] ]
 names  = ['DiphotonBDT']
 sigWeights = vhHadFW * (vhHadY>0.5) * (vhHadC<0.5) * (vhHadC>-0.5)
 bkgWeights = dataFW * (dataC<0.5) * (dataC>-0.5)
-nonWeights = vhHadFW * (vhHadP>100) * (vhHadP<114) * (vhHadC<0.5) * (vhHadC>-0.5)
+nonWeights = vhHadFW * (vhHadP>99.5) * (vhHadP<116.5) * (vhHadC<0.5) * (vhHadC>-0.5)
 optimiser = CatOptim(sigWeights, vhHadM, [vhHadD], bkgWeights, dataM, [dataD], 2, ranges, names)
 optimiser.setNonSig(nonWeights, vhHadM, [vhHadD])
 optimiser.optimise(opts.intLumi, opts.nIterations)
