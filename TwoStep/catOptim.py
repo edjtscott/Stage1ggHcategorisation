@@ -26,6 +26,9 @@ class Bests:
       bkg = bkgs[i] 
       non = nons[i] 
       signif = self.getAMS(sig, bkg+non)
+      #if sig+non > 0.:
+      #  signif = self.getAMS(sig * (sig/(sig+non)), bkg+non)
+      #else: signif = 0.
       #signif = self.getAMS(sig, bkg+(2.*non)) ## experimental higher penalty for ggH
       #signif = self.getAMS(sig, bkg+(non*non)) ## experimental higher penalty for ggH
       signifs.append(signif)

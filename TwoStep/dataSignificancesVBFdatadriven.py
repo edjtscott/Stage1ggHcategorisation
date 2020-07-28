@@ -6,7 +6,7 @@ import uproot as upr
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system
-from addRowFunctions import truthVBF, vbfWeight, cosThetaStar
+from addRowFunctions import truthVBF, vbfWeight, cosThetaStar, addLeadJetPhi, addSubleadJetPhi, modifyMjjHEM, modifyPtHjjHEM
 from catOptim import CatOptim
 
 #configure options
@@ -16,7 +16,7 @@ parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Name of dataframe if it already exists')
 parser.add_option('-s','--signalFrame', default=None, help='Name of signal dataframe if it already exists')
 parser.add_option('-m','--modelName', default=None, help='Name of diphoton model for testing')
-parser.add_option('-n','--nIterations', default=5000, help='Number of iterations to run for random significance optimisation')
+parser.add_option('-n','--nIterations', default=2000, help='Number of iterations to run for random significance optimisation')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
 (opts,args)=parser.parse_args()
 
@@ -78,7 +78,11 @@ else:
   print 'created total frame'
 
   trainTotal['truthVBF'] = trainTotal.apply(truthVBF,axis=1)
-  trainTotal['dijet_centrality']=np.exp(-4.*((trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2))
+  trainTotal['dijet_centrality'] = np.exp(-4.*((trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2))
+  trainTotal['dijet_leadPhi'] = trainTotal.apply(addLeadJetPhi,axis=1)
+  trainTotal['dijet_subleadPhi'] = trainTotal.apply(addSubleadJetPhi,axis=1)
+  #trainTotal['dijet_Mjj'] = trainTotal.apply(modifyMjjHEM,axis=1) #FIXME testing HEM effect
+  #trainTotal['dipho_dijet_ptHjj'] = trainTotal.apply(modifyPtHjjHEM,axis=1)
 
 dataTotal = None
 if not opts.dataFrame:
@@ -125,6 +129,8 @@ vbfFW = trainTotal['weight'].values
 vbfJ  = trainTotal['dijet_Mjj'].values
 vbfH  = trainTotal['dipho_pt'].values
 vbfHJ = trainTotal['dipho_dijet_ptHjj'].values
+vbfIL = trainTotal['dipho_leadIDMVA'].values
+vbfIS = trainTotal['dipho_subleadIDMVA'].values
 
 dataDX = dataTotal[diphoVars].values
 dataX  = dataTotal[dijetVars].values
@@ -133,6 +139,8 @@ dataFW = np.ones(dataM.shape[0])
 dataJ  = dataTotal['dijet_Mjj'].values
 dataH  = dataTotal['dipho_pt'].values
 dataHJ = dataTotal['dipho_dijet_ptHjj'].values
+dataIL = dataTotal['dipho_leadIDMVA'].values
+dataIS = dataTotal['dipho_subleadIDMVA'].values
 
 #evaluate dipho BDT scores
 diphoMatrix = xg.DMatrix(vbfDX, label=vbfY, weight=vbfFW, feature_names=diphoVars)
@@ -163,7 +171,8 @@ print 'some values of the bkg probability %s'%dataPredictions[0:10,0]
 
 #now estimate significance using the amount of background in a plus/mins 1 sigma window
 #set up parameters for the optimiser
-ranges = [ [0.,1.], [0.,1.], [0.,1.] ]
+ranges = [ [0.3,1.], [0.,0.7], [0.5,1.] ]
+#ranges = [ [0.3,1.], [0.,0.2], [0.5,1.] ] #FIXME testing lower ggH bounds
 names  = ['VBFscore', 'GGHscore', 'DiphotonBDT']
 printStr = ''
 
@@ -190,6 +199,17 @@ printStr = ''
 #optimiser.setOpposite('GGHscore')
 #optimiser.optimise(opts.intLumi, opts.nIterations)
 #printStr += 'Results for VBF with three categories are: \n'
+#printStr += optimiser.getPrintableResult()
+#
+### four categories inclusive
+#sigWeights = vbfFW * (vbfY==2) * (vbfJ>350.)
+#bkgWeights = dataFW * (dataJ>350.)
+#nonWeights = vbfFW * (vbfY==1) * (vbfJ>350.)
+#optimiser = CatOptim(sigWeights, vbfM, [vbfV,vbfG,vbfD], bkgWeights, dataM, [dataV,dataG,dataD], 4, ranges, names)
+#optimiser.setNonSig(nonWeights, vbfM, [vbfV,vbfG,vbfD])
+#optimiser.setOpposite('GGHscore')
+#optimiser.optimise(opts.intLumi, opts.nIterations)
+#printStr += 'Results for VBF with four categories are: \n'
 #printStr += optimiser.getPrintableResult()
 #
 #
@@ -341,20 +361,32 @@ printStr += 'Which means that the total VBF significance for the pTHjj and mjj s
 
 ## configure the signal and background for VBF-like ggH
 ## test one inclusive cat here
-names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
-sigWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfV<0.4)
-bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
-nonWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfV<0.4) 
-optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 1, ranges, names)
-optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
-optimiser.setOpposite('VBFscore')
-optimiser.optimise(opts.intLumi, opts.nIterations)
-printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
-printStr += optimiser.getPrintableResult()
 
+#print 'ED DEBUG understanding ggH score'
+#for score in np.arange(0.04, 0.99, 0.05):
+#  sigVal = 0.68 * np.sum( vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfV<0.4) * (vbfG > score) )
+#  nonVal = 0.68 * np.sum( vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfV<0.4) * (vbfG > score) )
+#  bkgVal = (4./80.) * np.sum( dataFW * (dataJ>350.) * (dataV<0.4) * (dataG > score) )
+#  if bkgVal+sigVal+nonVal > 0.:
+#    tempSignif = sigVal/np.sqrt(bkgVal+sigVal+nonVal)
+#  else: tempSignif = 0.
+#  print 'for score of %.3f the ggH, VBF, bkg, S/sqrt(S+B) values are %.3f, %.3f, %.3f, %.3f'%(score, sigVal, nonVal, bkgVal, tempSignif)
+
+names  = ['GGHscore', 'VBFscore', 'DiphotonBDT']
+#sigWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfV<0.4)
+#bkgWeights = dataFW * (dataJ>350.) * (dataV<0.4)
+#nonWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfV<0.4) 
+#optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 1, ranges, names)
+#optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])
+#optimiser.setOpposite('VBFscore')
+#optimiser.setConstBkg(True)
+#optimiser.optimise(opts.intLumi, opts.nIterations)
+#printStr += 'Results for ggH VBF-like with on inclusive category are: \n'
+#printStr += optimiser.getPrintableResult()
+#
 ### test two inclusive cats here
 sigWeights = vbfFW * (vbfY==1) * (vbfJ>350.) * (vbfV<0.4)
-bkgWeights = dataFW * (dataJ>350. * (dataV<0.4))
+bkgWeights = dataFW * (dataJ>350.) * (dataV<0.4)
 nonWeights = vbfFW * (vbfY==2) * (vbfJ>350.) * (vbfV<0.4) 
 optimiser = CatOptim(sigWeights, vbfM, [vbfG,vbfV,vbfD], bkgWeights, dataM, [dataG,dataV,dataD], 2, ranges, names)
 optimiser.setNonSig(nonWeights, vbfM, [vbfG,vbfV,vbfD])

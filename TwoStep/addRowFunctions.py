@@ -139,16 +139,16 @@ def cosThetaStar(row):
     diphoSystem = leadPho + subleadPho
 
     leadJet = lv()
-    leadJetPhi = row['dijet_leadDeltaPhi'] + diphoSystem.Phi()
+    leadJetPhi = row['gghMVA_leadDeltaPhi'] + diphoSystem.Phi()
     if leadJetPhi > pi: leadJetPhi = leadJetPhi - 2.*pi
     elif leadJetPhi < -1.*pi: leadJetPhi = leadJetPhi + 2.*pi
-    #print 'ED DEBUG leadJetPhi, dipho phi, deltaPhi = %.3f, %.3f, %.3f'%(leadJetPhi, diphoSystem.Phi(), row['dijet_leadDeltaPhi'])
+    #print 'ED DEBUG leadJetPhi, dipho phi, deltaPhi = %.3f, %.3f, %.3f'%(leadJetPhi, diphoSystem.Phi(), row['gghMVA_leadDeltaPhi'])
     leadJet.SetPtEtaPhiM( row['dijet_LeadJPt'], row['dijet_leadEta'], leadJetPhi, 0. )
     subleadJet = lv()
-    subleadJetPhi = row['dijet_subleadDeltaPhi'] + diphoSystem.Phi()
+    subleadJetPhi = row['gghMVA_subleadDeltaPhi'] + diphoSystem.Phi()
     if subleadJetPhi > pi: subleadJetPhi = subleadJetPhi - 2.*pi
     elif subleadJetPhi < -1.*pi: subleadJetPhi = subleadJetPhi + 2.*pi
-    #print 'ED DEBUG subleadJetPhi, dipho phi, deltaPhi = %.3f, %.3f, %.3f'%(subleadJetPhi, diphoSystem.Phi(), row['dijet_subleadDeltaPhi'])
+    #print 'ED DEBUG subleadJetPhi, dipho phi, deltaPhi = %.3f, %.3f, %.3f'%(subleadJetPhi, diphoSystem.Phi(), row['gghMVA_subleadDeltaPhi'])
     subleadJet.SetPtEtaPhiM( row['dijet_SubJPt'], row['dijet_subleadEta'], subleadJetPhi, 0. )
 
     diphoDijetSystem = leadPho + subleadPho + leadJet + subleadJet
@@ -159,3 +159,111 @@ def cosThetaStar(row):
     #print 'ED DEBUG resulting cos theta star value is %.3f'%returnVal
     
     return returnVal
+
+def addLeadJetPhi(row):
+    from ROOT import TLorentzVector as lv
+    from numpy import pi
+    leadPho = lv()
+    leadPho.SetPtEtaPhiM( row['dipho_lead_ptoM'] * row['dipho_mass'], row['dipho_leadEta'], row['dipho_leadPhi'], 0. )
+    subleadPho = lv()
+    subleadPho.SetPtEtaPhiM( row['dipho_sublead_ptoM'] * row['dipho_mass'], row['dipho_subleadEta'], row['dipho_subleadPhi'], 0. )
+
+    diphoSystem = leadPho + subleadPho
+
+    leadJet = lv()
+    leadJetPhi = row['gghMVA_leadDeltaPhi'] + diphoSystem.Phi()
+    if leadJetPhi > pi: leadJetPhi = leadJetPhi - 2.*pi
+    elif leadJetPhi < -1.*pi: leadJetPhi = leadJetPhi + 2.*pi
+ 
+    return leadJetPhi
+
+def addSubleadJetPhi(row):
+    from ROOT import TLorentzVector as lv
+    from numpy import pi
+    leadPho = lv()
+    leadPho.SetPtEtaPhiM( row['dipho_lead_ptoM'] * row['dipho_mass'], row['dipho_leadEta'], row['dipho_leadPhi'], 0. )
+    subleadPho = lv()
+    subleadPho.SetPtEtaPhiM( row['dipho_sublead_ptoM'] * row['dipho_mass'], row['dipho_subleadEta'], row['dipho_subleadPhi'], 0. )
+
+    diphoSystem = leadPho + subleadPho
+
+    subleadJet = lv()
+    subleadJetPhi = row['gghMVA_subleadDeltaPhi'] + diphoSystem.Phi()
+    if subleadJetPhi > pi: subleadJetPhi = subleadJetPhi - 2.*pi
+    elif subleadJetPhi < -1.*pi: subleadJetPhi = subleadJetPhi + 2.*pi
+ 
+    return subleadJetPhi
+
+def modifyMjjHEM(row):
+    from ROOT import TLorentzVector as lv
+    from numpy import pi
+    oldMass = row['dijet_Mjj']
+    leadJetPhi = row['dijet_leadPhi']
+    leadJetEta = row['dijet_leadEta']
+    leadJetPt  = row['dijet_LeadJPt']
+
+    #if leadJetPhi > -1.57 and leadJetPhi < -0.87:
+    #    if leadJetEta > -2.5 and leadJetEta < -1.3:
+    #        leadJetPt *= 0.8
+    #    elif leadJetEta > -3.0 and leadJetEta < -2.5:
+    #        leadJetPt *= 0.65
+
+    subleadJetPhi = row['dijet_subleadPhi']
+    subleadJetEta = row['dijet_subleadEta']
+    subleadJetPt  = row['dijet_SubJPt']
+
+    #if subleadJetPhi > -1.57 and subleadJetPhi < -0.87:
+    #    if subleadJetEta > -2.5 and subleadJetEta < -1.3:
+    #        subleadJetPt *= 0.8
+    #    elif subleadJetEta > -3.0 and subleadJetEta < -2.5:
+    #        subleadJetPt *= 0.65
+ 
+    leadJet = lv()
+    leadJet.SetPtEtaPhiM( leadJetPt, leadJetEta, leadJetPhi, 0. )
+    subleadJet = lv()
+    subleadJet.SetPtEtaPhiM( subleadJetPt, subleadJetEta, subleadJetPhi, 0. )
+
+    dijetSystem = leadJet + subleadJet
+    newMass = dijetSystem.M()
+    print 'old mass, new mass: %.3f, %.3f'%(oldMass, newMass)
+    return dijetSystem.M()
+
+def modifyPtHjjHEM(row):
+    from ROOT import TLorentzVector as lv
+    from numpy import pi
+    oldPt = row['dipho_dijet_ptHjj']
+    leadJetPhi = row['dijet_leadPhi']
+    leadJetEta = row['dijet_leadEta']
+    leadJetPt  = row['dijet_LeadJPt']
+
+    #if leadJetPhi > -1.57 and leadJetPhi < -0.87:
+    #    if leadJetEta > -2.5 and leadJetEta < -1.3:
+    #        leadJetPt *= 0.8
+    #    elif leadJetEta > -3.0 and leadJetEta < -2.5:
+    #        leadJetPt *= 0.65
+
+    subleadJetPhi = row['dijet_subleadPhi']
+    subleadJetEta = row['dijet_subleadEta']
+    subleadJetPt  = row['dijet_SubJPt']
+
+    #if subleadJetPhi > -1.57 and subleadJetPhi < -0.87:
+    #    if subleadJetEta > -2.5 and subleadJetEta < -1.3:
+    #        subleadJetPt *= 0.8
+    #    elif subleadJetEta > -3.0 and subleadJetEta < -2.5:
+    #        subleadJetPt *= 0.65
+ 
+    leadJet = lv()
+    leadJet.SetPtEtaPhiM( leadJetPt, leadJetEta, leadJetPhi, 0. )
+    subleadJet = lv()
+    subleadJet.SetPtEtaPhiM( subleadJetPt, subleadJetEta, subleadJetPhi, 0. )
+
+    leadPho = lv()
+    leadPho.SetPtEtaPhiM( row['dipho_lead_ptoM'] * row['dipho_mass'], row['dipho_leadEta'], row['dipho_leadPhi'], 0. )
+    subleadPho = lv()
+    subleadPho.SetPtEtaPhiM( row['dipho_sublead_ptoM'] * row['dipho_mass'], row['dipho_subleadEta'], row['dipho_subleadPhi'], 0. )
+
+    diphoDijetSystem = leadPho + subleadPho + leadJet + subleadJet
+    newPt = diphoDijetSystem.Pt()
+    print 'old ptHjj, new ptHjj: %.3f, %.3f'%(oldPt, newPt)
+
+    return newPt

@@ -144,7 +144,7 @@ dataV  = vhHadModel.predict(dataMatrix)
 
 #now estimate significance using the amount of background in a plus/mins 1 sigma window
 #set up parameters for the optimiser
-ranges = [ [0.,1.], [0.,1.] ]
+ranges = [ [0.,1.], [0.5,1.] ]
 names  = ['VHhadBDT','DiphotonBDT']
 printStr = ''
 
@@ -158,7 +158,7 @@ optimiser.optimise(opts.intLumi, opts.nIterations)
 printStr += 'Results for VH hadronic bin are: \n'
 printStr += optimiser.getPrintableResult()
 
-ranges = [ [0.,1.] ]
+ranges = [ [0.5,1.] ]
 names  = ['DiphotonBDT']
 sigWeights = vhHadFW * (vhHadY>0.5) * (vhHadC<0.5) * (vhHadC>-0.5)
 bkgWeights = dataFW * (dataC<0.5) * (dataC>-0.5)
