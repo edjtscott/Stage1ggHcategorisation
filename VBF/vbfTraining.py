@@ -5,8 +5,8 @@ import xgboost as xg
 import uproot as upr
 import pickle
 from sklearn.metrics import roc_auc_score, roc_curve
-from os import path, system
-from addRowFunctions import truthVBF, vbfWeight
+from os import path, system, listdir
+from Tools.addRowFunctions import truthVBF, vbfWeight, cosThetaStar
 
 #configure options
 from optparse import OptionParser
@@ -23,51 +23,76 @@ if trainDir.endswith('/'): trainDir = trainDir[:-1]
 frameDir = trainDir.replace('trees','frames')
 if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 
+#define variables to be used
+from Tools.variableDefinitions import allVarsGen, dijetVars, lumiDict
+
+#including the full selection
+hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
+queryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2) and (dipho_subleadIDMVA>-0.2) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
+
+#define hdf input
+hdfDir = trainDir.replace('trees','hdfs')
+
+hdfList = []
+if hdfDir.count('all'):
+  for year in lumiDict.keys():
+    tempHdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,year)).query(hdfQueryString)
+    tempHdfFrame = tempHdfFrame[tempHdfFrame['sample']=='QCD']
+    tempHdfFrame.loc[:, 'weight'] = tempHdfFrame['weight'] * lumiDict[year]
+    #tempHdfFrame['HTXSstage1p2bin'] = 0
+    hdfList.append(tempHdfFrame)
+  hdfFrame = pd.concat(hdfList, sort=False)
+else:
+  hdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
+  hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
+  #hdfFrame['HTXSstage1p2bin'] = 0
+
+hdfFrame['proc'] = 'datadriven'
+
 #define input files
-procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'vh':'VH.root',
-               'dipho':'Dipho.root', 'gjet_anyfake':'GJet.root', 'qcd_anyfake':'QCD.root'}
+procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'vh':'powheg_VH.root',
+               'dipho':'Dipho.root'}
 theProcs = procFileMap.keys()
 signals     = ['ggh','vbf','vh']
-backgrounds = ['dipho','gjet_anyfake','qcd_anyfake']
-
-#define variables to be used
-from variableDefinitions import allVarsGen, dijetVars
+backgrounds = ['dipho']
 
 #either get existing data frame or create it
 trainTotal = None
 if not opts.dataFrame:
-  trainFrames = {}
+  trainList = []
   #get trees from files, put them in data frames
-  for proc,fn in procFileMap.iteritems():
+  if not 'all' in trainDir:
+    for proc,fn in procFileMap.iteritems():
+      print 'reading in tree from file %s'%fn
       trainFile   = upr.open('%s/%s'%(trainDir,fn))
       if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
       elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
       else: raise Exception('Error did not recognise process %s !'%proc)
-      trainFrames[proc] = trainTree.pandas.df(allVarsGen)
-      trainFrames[proc]['proc'] = proc
-  print 'got trees'
+      tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+      tempFrame['proc'] = proc
+      trainList.append(tempFrame)
+  else:
+    for year in lumiDict.keys():
+      for proc,fn in procFileMap.iteritems():
+        thisDir = trainDir.replace('all',year)
+        print 'reading in tree from file %s'%fn
+        trainFile   = upr.open('%s/%s'%(thisDir,fn))
+        if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
+        elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
+        else: raise Exception('Error did not recognise process %s !'%proc)
+        tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
+        tempFrame['proc'] = proc
+        tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
+        trainList.append(tempFrame)
+  print 'got trees and applied selections'
 
   #create one total frame
-  trainList = []
-  for proc in theProcs:
-      trainList.append(trainFrames[proc])
-  trainTotal = pd.concat(trainList)
-  del trainFrames
+  trainList.append(hdfFrame)
+  trainTotal = pd.concat(trainList, sort=False)
+  del trainList
+  del hdfFrame
+  del tempFrame
   print 'created total frame'
-
-  #then filter out the events into only those with the phase space we are interested in
-  trainTotal = trainTotal[trainTotal.dipho_mass>100.]
-  trainTotal = trainTotal[trainTotal.dipho_mass<180.]
-  print 'done mass cuts'
-  trainTotal = trainTotal[trainTotal.dipho_leadIDMVA>-0.2]
-  trainTotal = trainTotal[trainTotal.dipho_subleadIDMVA>-0.2]
-  trainTotal = trainTotal[trainTotal.dipho_lead_ptoM>0.333]
-  trainTotal = trainTotal[trainTotal.dipho_sublead_ptoM>0.25]
-  print 'done basic preselection cuts'
-  trainTotal = trainTotal[trainTotal.dijet_LeadJPt>40.]
-  trainTotal = trainTotal[trainTotal.dijet_SubJPt>30.]
-  trainTotal = trainTotal[trainTotal.dijet_Mjj>250.]
-  print 'done jet cuts'
 
   #add the target variable and the equalised weight
   trainTotal['truthVBF'] = trainTotal.apply(truthVBF,axis=1)
@@ -81,8 +106,8 @@ if not opts.dataFrame:
   #save as a pickle file
   if not path.isdir(frameDir): 
     system('mkdir -p %s'%frameDir)
-  trainTotal.to_pickle('%s/vbfTotal.pkl'%frameDir)
-  print 'frame saved as %s/vbfTotal.pkl'%frameDir
+  trainTotal.to_pickle('%s/vbfDataDriven.pkl'%frameDir)
+  print 'frame saved as %s/vbfDataDriven.pkl'%frameDir
 
 #read in dataframe if above steps done before
 else:
@@ -138,7 +163,7 @@ if opts.trainParams:
   paramExt = paramExt[:-2]
 
 #train the BDT
-print 'about to train diphoton BDT'
+print 'about to train the dijet BDT'
 vbfModel = xg.train(trainParams, trainMatrix)
 print 'done'
 
@@ -146,8 +171,8 @@ print 'done'
 modelDir = trainDir.replace('trees','models')
 if not path.isdir(modelDir):
   system('mkdir -p %s'%modelDir)
-vbfModel.save_model('%s/vbfModel%s.model'%(modelDir,paramExt))
-print 'saved as %s/vbfModel%s.model'%(modelDir,paramExt)
+vbfModel.save_model('%s/vbfDataDriven%s.model'%(modelDir,paramExt))
+print 'saved as %s/vbfDataDriven%s.model'%(modelDir,paramExt)
 
 #evaluate performance using area under the ROC curve
 vbfPredYtrain = vbfModel.predict(trainMatrix).reshape(vbfTrainY.shape[0],numClasses)

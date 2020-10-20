@@ -1,6 +1,10 @@
 import numpy as np
 import os
 
+def run(cmd):
+  print cmd
+  os.system(cmd)
+
 def prettyHist( hist ):
     hist.SetStats(0)
     hist.GetXaxis().SetTitle('Process')
