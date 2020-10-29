@@ -12,6 +12,7 @@ cd CMSSW_10_2_0/src/
 cmsenv
 git cms-init
 git clone -b Clean2020 https://github.com/edjtscott/Stage1categorisation.git
+cd Stage1categorisation
 ```
 
 If you don't have a github account yet, it's probably worth creating one and forking this repository so you can play with it and update as needed.
