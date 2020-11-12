@@ -14,7 +14,8 @@ parser = OptionParser()
 parser.add_option('-t','--trainDir', help='Directory for input files')
 parser.add_option('-d','--dataFrame', default=None, help='Path to dataframe if it already exists')
 parser.add_option('--intLumi',type='float', default=35.9, help='Integrated luminosity')
-parser.add_option('--trainParams',default=None, help='Comma-separated list of colon-separated pairs corresponding to parameters for the training')
+parser.add_option('--trainParams', default=None, help='Comma-separated list of colon-separated pairs corresponding to parameters for the training')
+parser.add_option('--useDataDriven', action='store_true', default=False, help='Use the data-driven replacement for backgrounds with non-prompt photons')
 (opts,args)=parser.parse_args()
 
 #setup global variables
@@ -26,28 +27,32 @@ if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 #define variables to be used
 from Tools.variableDefinitions import allVarsGen, dijetVars, lumiDict
 
+#possible to add new variables here - have done some suggested ones as an example
+newVars = ['gghMVA_leadPhi','gghMVA_leadJEn','gghMVA_subleadPhi','gghMVA_SubleadJEn','gghMVA_SubsubleadJPt','gghMVA_SubsubleadJEn','gghMVA_subsubleadPhi','gghMVA_subsubleadEta']
+allVarsGen += newVars
+dijetVars += newVars
+
 #including the full selection
 hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
 queryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2) and (dipho_subleadIDMVA>-0.2) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
 
-#define hdf input
-hdfDir = trainDir.replace('trees','hdfs')
-
-hdfList = []
-if hdfDir.count('all'):
-  for year in lumiDict.keys():
-    tempHdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,year)).query(hdfQueryString)
-    tempHdfFrame = tempHdfFrame[tempHdfFrame['sample']=='QCD']
-    tempHdfFrame.loc[:, 'weight'] = tempHdfFrame['weight'] * lumiDict[year]
-    #tempHdfFrame['HTXSstage1p2bin'] = 0
-    hdfList.append(tempHdfFrame)
-  hdfFrame = pd.concat(hdfList, sort=False)
-else:
-  hdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
-  hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
-  #hdfFrame['HTXSstage1p2bin'] = 0
-
-hdfFrame['proc'] = 'datadriven'
+if opts.useDataDriven:
+  #define hdf input
+  hdfDir = trainDir.replace('trees','hdfs')
+  
+  hdfList = []
+  if hdfDir.count('all'):
+    for year in lumiDict.keys():
+      tempHdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,year)).query(hdfQueryString)
+      tempHdfFrame = tempHdfFrame[tempHdfFrame['sample']=='QCD']
+      tempHdfFrame.loc[:, 'weight'] = tempHdfFrame['weight'] * lumiDict[year]
+      hdfList.append(tempHdfFrame)
+    hdfFrame = pd.concat(hdfList, sort=False)
+  else:
+    hdfFrame = pd.read_hdf('%s/VBF_with_DataDriven_%s_MERGEDFF_NORM_NEW.h5'%(hdfDir,hdfDir.split('/')[-2]) ).query(hdfQueryString)
+    hdfFrame = hdfFrame[hdfFrame['sample']=='QCD']
+  
+  hdfFrame['proc'] = 'datadriven'
 
 #define input files
 procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'vh':'powheg_VH.root',
@@ -55,6 +60,9 @@ procFileMap = {'ggh':'powheg_ggH.root', 'vbf':'powheg_VBF.root', 'vh':'powheg_VH
 theProcs = procFileMap.keys()
 signals     = ['ggh','vbf','vh']
 backgrounds = ['dipho']
+if not opts.useDataDriven:
+  procFileMap['gjet_anyfake'] = 'GJet.root'
+  backgrounds.append('gjet_anyfake')
 
 #either get existing data frame or create it
 trainTotal = None
@@ -87,11 +95,13 @@ if not opts.dataFrame:
   print 'got trees and applied selections'
 
   #create one total frame
-  trainList.append(hdfFrame)
+  if opts.useDataDriven: 
+    trainList.append(hdfFrame)
   trainTotal = pd.concat(trainList, sort=False)
   del trainList
-  del hdfFrame
   del tempFrame
+  if opts.useDataDriven: 
+    del hdfFrame
   print 'created total frame'
 
   #add the target variable and the equalised weight
