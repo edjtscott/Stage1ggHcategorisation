@@ -4,6 +4,9 @@ import pandas as pd
 import xgboost as xg
 import uproot as upr
 import pickle
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system, listdir
 from Tools.addRowFunctions import truthVBF, vbfWeight, cosThetaStar
@@ -141,6 +144,7 @@ vbfTrainTW, vbfTestTW = np.split( vbfTW, [trainLimit] )
 vbfTrainFW, vbfTestFW = np.split( vbfFW, [trainLimit] )
 vbfTrainM,  vbfTestM  = np.split( vbfM,  [trainLimit] )
 
+
 #set up the training and testing matrices
 trainMatrix = xg.DMatrix(vbfTrainX, label=vbfTrainY, weight=vbfTrainTW, feature_names=dijetVars)
 testMatrix  = xg.DMatrix(vbfTestX, label=vbfTestY, weight=vbfTestFW, feature_names=dijetVars)
@@ -182,3 +186,144 @@ vbfTruthYtest  = np.where(vbfTestY==2, 0, 1)
 print 'Training performance:'
 print 'area under roc curve for training set = %1.3f'%( 1.-roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
 print 'area under roc curve for test set     = %1.3f'%( 1.-roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
+
+#make some plots
+#print (type(trainTotal[trainTotal.truthVBF==2]['dipho_lead_ptoM']))
+#print(type(trainTotal[trainTotal.truthVBF==2]))
+
+var_list = []
+for (columnName, columnData) in trainTotal[trainTotal.truthVBF==2][dijetVars].iteritems():
+    #print('column name', columnName)
+    var_list.append(columnName)
+print 'var_list', var_list
+
+x_label_list =[r'$p_^1/m_{\gamma\gamma}$',r'$p^2/m_{\gamma\gamma}$',r'$p_T^{j1}$',r'$p_T^{j2}$',r'$|\Delta\eta|$',r'$m_{jj}$',r'$C_{\gamma\gamma}$',r'$|\Delta\phi_{jj}|$',r'$\Delta R_{min}(\gamma,j)$',r'$|\Delta \phi_{\gamma\gamma,jj}|$']
+
+
+plotDir = trainDir.replace('trees','plots')
+#plotDir = '%s/%s'%(paramExt)
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
+
+'''
+for i in range(3,len(var_list)):
+    plt.figure(i+1)
+    plt.hist(trainTotal[trainTotal.truthVBF==2][var_list[i]],bins = 50,label = 'vbf',alpha = 0.5,normed = True)
+    plt.hist(trainTotal[trainTotal.truthVBF==1][var_list[i]],bins = 50,label = 'ggh',alpha = 0.5,normed = True)
+    plt.hist(trainTotal[trainTotal.truthVBF==0][var_list[i]],bins = 50,label = 'bkg',alpha = 0.5,normed = True)
+    plt.xlabel(x_label_list[i], size = 14)
+    plt.ylabel("events", size=14)
+    plt.legend(loc='upper right')
+    plt.savefig('%s/%s.pdf'%(plotDir,var_list[i]))
+    print var_list[i]
+    print 'saved as %s/%s.pdf'%(plotDir,var_list[i])
+
+
+'''
+#the transverse momentum of the two leading photons, divided by the diphoton mass
+plt.figure(1)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dipho_lead_ptoM'],range =[0.2,1.8],bins = 50,label = 'bkg',alpha = 0.5,normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dipho_lead_ptoM'],range =[0.2,1.8],bins = 50,label = 'ggh',alpha = 0.5,normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dipho_lead_ptoM'],range =[0.2,1.8],bins = 50,label = 'vbf',alpha = 0.5,normed = True)
+plt.xlabel(r'$p^1/m_{\gamma\gamma}$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dipho_lead_ptoM.pdf'%plotDir)
+print 'saved as %s/dipho_lead_ptoM.pdf'%plotDir
+
+plt.figure(2)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dipho_sublead_ptoM'],range =[0.2,1.0],bins = 50,label = 'bkg',alpha = 0.5,normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dipho_sublead_ptoM'],range =[0.2,1.0],bins = 50,label = 'ggh',alpha = 0.5,normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dipho_sublead_ptoM'],range =[0.2,1.0],bins = 50,label = 'vbf',alpha = 0.5,normed = True)
+plt.xlabel(r'$p^2/m_{\gamma\gamma}$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dipho_sublead_ptoM.pdf'%plotDir)
+print 'saved as %s/dipho_sublead_ptoM.pdf'%plotDir
+
+#the transverse momentum of the two leading jets
+plt.figure(3)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_LeadJPt'],range =[0.2,600],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_LeadJPt'],range =[0.2,600],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_LeadJPt'],range =[0.2,600],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$p^{j1}_T$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_LeadJPt.pdf'%plotDir)
+print 'saved as %s/dijet_LeadJPt.pdf'%plotDir
+
+plt.figure(4)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_SubJPt'],range =[0.2,600],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_SubJPt'],range =[0.2,600],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_SubJPt'],range =[0.2,600],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$p^{j2}_T$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_SubJPt.pdf'%plotDir)
+print 'saved as %s/dijet_SubJPt.pdf'%plotDir
+
+#the dijet_abs_dEta
+plt.figure(5)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_abs_dEta'],range =[0,10],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_abs_dEta'],range =[0,10],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_abs_dEta'],range =[0,10],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$|\Delta\eta|$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_abs_dEta.pdf'%plotDir)
+print 'saved as %s/dijet_abs_dEta.pdf'%plotDir
+
+#th dijet  invarian mass
+plt.figure(6)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_Mjj'],range =[0,600],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_Mjj'],range =[0,600],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_Mjj'],range =[0,600],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$m_{jj}$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_Mjj.pdf'%plotDir)
+print 'saved as %s/dijet_Mjj.pdf'%plotDir
+
+#dijet_centrality
+plt.figure(7)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_centrality'],range =[0,1.0],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_centrality'],range =[0,1.0],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_centrality'],range =[0,1.0],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$C_{\gamma\gamma}$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_centrality.pdf'%plotDir)
+print 'saved as %s/dijet_centrality.pdf'%plotDir
+
+#dijet_dphi
+plt.figure(8)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_dphi'],range =[0,3.5],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_dphi'],range =[0,3.5],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_dphi'],range =[0,3.5],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$|\Delta\phi_{jj}|$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_dphi.pdf'%plotDir)
+print 'saved as %s/dijet_dphi.pdf'%plotDir
+
+#dijet_minDRJetPho
+plt.figure(9)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_minDRJetPho'],range =[0,6],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_minDRJetPho'],range =[0,6],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_minDRJetPho'],range =[0,6],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$\Delta R_{min}(\gamma,j)$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_minDRJetPho.pdf'%plotDir)
+print 'saved as %s/dijet_minDRJetPho.pdf'%plotDir
+
+#dijet_dipho_dphi_trunc
+plt.figure(10)
+plt.hist(trainTotal[trainTotal.truthVBF==0]['dijet_dipho_dphi_trunc'],range = [0,3.5],bins = 50,alpha = 0.5,label = 'bkg',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==1]['dijet_dipho_dphi_trunc'],range = [0,3.5],bins = 50,alpha = 0.5,label = 'ggh',normed = True)
+plt.hist(trainTotal[trainTotal.truthVBF==2]['dijet_dipho_dphi_trunc'],range = [0,3.5],bins = 50,alpha = 0.5,label = 'vbf',normed = True)
+plt.xlabel(r'$|\Delta \phi_{\gamma\gamma,jj}|$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dijet_dipho_dphi_trunc.pdf'%plotDir)
+print 'saved as %s/dijet_dipho_dphi_trunc.pdf'%plotDir
