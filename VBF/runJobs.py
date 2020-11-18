@@ -14,7 +14,9 @@ parser.add_option('-a','--additional', default=None, help='Add a json file speci
 (opts,args)=parser.parse_args()
 
 myDir = getcwd()
-baseDir = '/vols/cms/kz1617/Stage1categorisation/UltraLegacy/'
+baseDir = '/vols/cms/kz1617/Stage1categorisation/UltraLegacy/Pass2'
+#baseDir = '/vols/cms/es811/Stage1categorisation/Legacy/Pass5'
+#baseDir = '/vols/cms/es811/Stage1categorisation/UltraLegacy/Pass2'
 
 if not path.isfile(opts.script):
   raise OSError('Your chosen script does not exist')
