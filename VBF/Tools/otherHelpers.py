@@ -57,7 +57,7 @@ def submitJob( jobDir, theCmd, params=None, model=None, dryRun=False ):
   else:
     outName += 'None'
   outName += '.sh'
-  with open('submitTemplate.sh') as inFile:
+  with open('Tools/submitTemplate.sh') as inFile:
     with open(outName,'w') as outFile:
       for line in inFile.readlines():
         if '!CMD!' in line:

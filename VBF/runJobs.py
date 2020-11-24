@@ -28,6 +28,9 @@ lumis['all']  = 1.
 if not opts.year in lumis.keys():
   raise KeyError('Your chosen year is not in the allowed options: %s'%lumis.keys())
 
+#list of model hyper paramters used in training. e.g. ['max_depth:5,eta:0.01']
+paramSets = [] 
+
 if __name__=='__main__':
   jobDir = '%s/Jobs/%s/%s' % (myDir, opts.script.replace('.py',''), opts.year)
   if not path.isdir( jobDir ): system('mkdir -p %s'%jobDir)
@@ -35,4 +38,9 @@ if __name__=='__main__':
   theCmd = 'python %s -t %s --intLumi %s'%(opts.script, trainDir, lumis[opts.year])
   if opts.dryRun: print theCmd
   elif opts.local: run(theCmd)
-  else: submitJob( jobDir, theCmd, params=params, dryRun=dryRun )
+  elif len(paramSets)!=0:
+    for params in paramSets:  
+      theCmd += ' --trainParams %s '%params
+      submitJob( jobDir, theCmd, params=params, dryRun=opts.dryRun)
+
+  else: submitJob( jobDir, theCmd, dryRun=opts.dryRun )
