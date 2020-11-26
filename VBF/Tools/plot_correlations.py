@@ -8,17 +8,18 @@ from os import path, system
 
 plt.rcParams.update({'font.size':'8'})
 
-def corr_matrix(arr1, arr2):
+def corr_matrix(arr1, arr2, weights):
     '''
     Calculate pearson correlation coefficient for two vectors (features)
     '''
 
-    m1 = np.average(arr1)*np.ones_like(arr1)
-    m2 = np.average(arr2)*np.ones_like(arr2)
-    cov_11 = float(((arr1-m1)**2).sum()) #denom1
-    cov_22 = float(((arr2-m2)**2).sum()) #denom2
-    cov_12 = float(((arr1-m1)*(arr2-m2)).sum())
+    m1 = np.average(arr1,weights=weights)*np.ones_like(arr1)
+    m2 = np.average(arr2,weights=weights)*np.ones_like(arr2)
+    cov_11 = float((weights*(arr1-m1)**2).sum()/weights.sum())
+    cov_22 = float((weights*(arr2-m2)**2).sum()/weights.sum())
+    cov_12 = float((weights*(arr1-m1)*(arr2-m2)).sum()/weights.sum())
     return cov_12/np.sqrt(cov_11*cov_22)
+
 
 def plot_numbers(ax,mat):
     '''
@@ -32,15 +33,16 @@ def plot_numbers(ax,mat):
 
 def main(options):
     labels_to_plot = [var.replace('_',' ') for var in dijet_vars]
+    vbf_cuts = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2) and (dipho_subleadIDMVA>-0.2) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
 
     #get root files, convert into dataframes
     sig_file = upr.open(options.sigPath)
     sig_tree = sig_file[options.sigTree]
-    sig_df   = sig_tree.pandas.df(all_vars_gen)
+    sig_df   = sig_tree.pandas.df(all_vars_gen).query(vbf_cuts)
     sig_df['dijet_centrality']=np.exp(-4.*((sig_df.dijet_Zep/sig_df.dijet_abs_dEta)**2))
 
     #get correlations
-    sig_corrs = np.array([ [100*corr_matrix(sig_df[var1].values, sig_df[var2].values) for var2 in dijet_vars] for var1 in dijet_vars])
+    sig_corrs = np.array([ [100*corr_matrix(sig_df[var1].values, sig_df[var2].values, sig_df['weight']) for var2 in dijet_vars] for var1 in dijet_vars])
     
     #plot sig correlations
     plt.set_cmap('bwr')
@@ -54,13 +56,13 @@ def main(options):
     axes.set_yticklabels(labels_to_plot)
     axes.xaxis.tick_top()
     cbar = fig.colorbar(mat)
-    cbar.set_label(r'Correlation (\%)')
+    cbar.set_label(r'Correlation (%)')
 
     if not path.isdir('/plots'):
         print 'making directory: {}'.format('plots/')
         system('mkdir -p plots/')
     fig.savefig('plots/vbf_sig_crl_matrix.pdf')
-    print 'saving fig: {}'.format('plots/vbf_sig_crl_matrix.pdf')
+    print 'saving fig: {}'.format('plots/vbf_sig_crl_matrix.pdf', bbox_inches="tight")
     plt.close()
 
     #NOTE: might be interesting to also look the correlation for the background procs, and/or other signal procs (ggH)
