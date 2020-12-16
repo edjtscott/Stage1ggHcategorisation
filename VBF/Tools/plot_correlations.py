@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import uproot as upr
+import matplotlib
+import matplotlib as mpl
+mpl.use('Agg') #solve displays environment in windows
 import matplotlib.pyplot as plt
 import argparse
 from variableDefinitions import allVarsGen as all_vars_gen, dijetVars as dijet_vars
@@ -32,11 +35,12 @@ def plot_numbers(ax,mat):
 
 def main(options):
     labels_to_plot = [var.replace('_',' ') for var in dijet_vars]
+    vbf_cuts = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2) and (dipho_subleadIDMVA>-0.2) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
 
     #get root files, convert into dataframes
     sig_file = upr.open(options.sigPath)
     sig_tree = sig_file[options.sigTree]
-    sig_df   = sig_tree.pandas.df(all_vars_gen)
+    sig_df   = sig_tree.pandas.df(all_vars_gen).query(vbf_cuts)
     sig_df['dijet_centrality']=np.exp(-4.*((sig_df.dijet_Zep/sig_df.dijet_abs_dEta)**2))
 
     #get correlations
@@ -46,6 +50,8 @@ def main(options):
     plt.set_cmap('bwr')
     fig = plt.figure()
     axes= plt.gca()
+    mpl.rcParams['figure.figsize'] = [10.0, 8.0]
+
     mat = axes.matshow(sig_corrs, vmin=-100, vmax=100)
     plot_numbers(axes, sig_corrs)
     axes.set_yticks(np.arange(len(dijet_vars)))
@@ -59,7 +65,7 @@ def main(options):
     if not path.isdir('/plots'):
         print 'making directory: {}'.format('plots/')
         system('mkdir -p plots/')
-    fig.savefig('plots/vbf_sig_crl_matrix.pdf')
+    fig.savefig('plots/vbf_sig_crl_matrix.pdf',dpi=300, bbox_inches = "tight") #add "tight" to show full xticks
     print 'saving fig: {}'.format('plots/vbf_sig_crl_matrix.pdf')
     plt.close()
 
@@ -72,3 +78,5 @@ if __name__ == '__main__':
     required_args.add_argument('-s', '--sigTree', action='store', type=str, required=True)
     options=parser.parse_args()
     main(options)
+
+

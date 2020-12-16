@@ -32,8 +32,11 @@ from Tools.variableDefinitions import allVarsGen, dijetVars, lumiDict
 
 #possible to add new variables here - have done some suggested ones as an example
 newVars = ['gghMVA_leadPhi','gghMVA_leadJEn','gghMVA_subleadPhi','gghMVA_SubleadJEn','gghMVA_SubsubleadJPt','gghMVA_SubsubleadJEn','gghMVA_subsubleadPhi','gghMVA_subsubleadEta']
+newdiphoVars = ['dipho_leadIDMVA', 'dipho_subleadIDMVA','dipho_leadEta', 'dipho_subleadEta', 'dipho_cosphi', 'vtxprob', 'sigmarv', 'sigmawv']
 allVarsGen += newVars
+allVarsGen += newdiphoVars
 dijetVars += newVars
+dijetVars += newdiphoVars
 
 #including the full selection
 hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
@@ -164,6 +167,10 @@ numClasses = 3
 trainParams['num_class'] = numClasses
 trainParams['nthread'] = 1
 #trainParams['seed'] = 123456
+#trainParams['max_depth'] = 7
+#trainParams['n_estimators'] = 300
+#trainParams['eta'] = 0.3
+#trainParams['sub_sample'] = 0.9
 
 #add any specified training parameters
 paramExt = ''
@@ -207,13 +214,32 @@ for (columnName, columnData) in trainTotal[trainTotal.truthVBF==2][dijetVars].it
     var_list.append(columnName)
 print 'var_list', var_list
 
-x_label_list =[r'$p_^1/m_{\gamma\gamma}$',r'$p^2/m_{\gamma\gamma}$',r'$p_T^{j1}$',r'$p_T^{j2}$',r'$|\Delta\eta|$',r'$m_{jj}$',r'$C_{\gamma\gamma}$',r'$|\Delta\phi_{jj}|$',r'$\Delta R_{min}(\gamma,j)$',r'$|\Delta \phi_{\gamma\gamma,jj}|$']
+#x_label_list =[r'$p_^1/m_{\gamma\gamma}$',r'$p^2/m_{\gamma\gamma}$',r'$p_T^{j1}$',r'$p_T^{j2}$',r'$|\Delta\eta|$',r'$m_{jj}$',r'$C_{\gamma\gamma}$',r'$|\Delta\phi_{jj}|$',r'$\Delta R_{min}(\gamma,j)$',r'$|\Delta \phi_{\gamma\gamma,jj}|$']
 
 
 plotDir = trainDir.replace('trees','plots')
 #plotDir = '%s/%s'%(paramExt)
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)
+
+#roc_curve
+fpr_tr, tpr_tr, thresholds_tr = roc_curve(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW)
+fpr_tst,tpr_tst, thresholds_tst = roc_curve(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)
+
+plt.figure(1)
+#plt.plot(tpr_tr,fpr_tr,label = r'training set ROC curve (area = %1.3f $\pm$ 0.001 )'%( 1.-roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW)) )
+#plt.plot(tpr_tst,fpr_tst,label = r'test set ROC curve (area = %1.3f $\pm$ 0.004)'%( 1.-roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))  )
+plt.plot(tpr_tr,fpr_tr,label = r'training set ROC curve (area = 0.923 $\pm$ 0.001)')
+plt.plot(tpr_tst,fpr_tst,label = r'test set ROC curve (area = 0.920 $\pm$ 0.004)')
+plt.xlabel('False positive rate')
+plt.ylabel('True positive rate')
+plt.title('ROC curve with dipho variables')
+plt.legend(loc='best',prop={'size': 12})
+plt.savefig('%s/ROC_curve_wDipho.pdf'%plotDir)
+print 'saved as %s/ROC_curve_wDipho.pdf'%plotDir
+
+
+
 
 '''
 for i in range(3,len(var_list)):
@@ -229,7 +255,6 @@ for i in range(3,len(var_list)):
     print 'saved as %s/%s.pdf'%(plotDir,var_list[i])
 
 
-'''
 #the transverse momentum of the two leading photons, divided by the diphoton mass
 plt.figure(1)
 plt.hist(trainTotal[trainTotal.truthVBF==0]['dipho_lead_ptoM'],range =[0.2,1.8],bins = 50,label = 'bkg',alpha = 0.5,normed = True)
@@ -337,3 +362,6 @@ plt.ylabel("events", size=14)
 plt.legend(loc='upper right')
 plt.savefig('%s/dijet_dipho_dphi_trunc.pdf'%plotDir)
 print 'saved as %s/dijet_dipho_dphi_trunc.pdf'%plotDir
+'''
+
+

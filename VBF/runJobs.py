@@ -9,7 +9,7 @@ parser = OptionParser()
 parser.add_option('-s','--script', default='vbfDataDriven', help='Script to run')
 parser.add_option('-l','--local', action="store_true", default=False, help='Run locally instead of on IC batch')
 parser.add_option('-d','--dryRun', action="store_true", default=False, help='Print command instead of actually running it')
-parser.add_option('-y','--year', default='all', help='Specify if you want 2016, 2017, or 2018 data, or choose all of them together')
+parser.add_option('-y','--year',default='2017', help='Specify if you want 2016, 2017, or 2018 data, or choose all of them together')
 parser.add_option('-a','--additional', default=None, help='Add a json file specifying further options for your script')
 (opts,args)=parser.parse_args()
 
