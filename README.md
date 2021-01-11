@@ -11,7 +11,8 @@ cmsrel CMSSW_10_2_0
 cd CMSSW_10_2_0/src/
 cmsenv
 git cms-init
-git clone https://github.com/edjtscott/Stage1categorisation.git
+git clone -b Clean2020 https://github.com/edjtscott/Stage1categorisation.git
+cd Stage1categorisation
 ```
 
 If you don't have a github account yet, it's probably worth creating one and forking this repository so you can play with it and update as needed.
@@ -23,7 +24,5 @@ git checkout -b yourbranchname
 ```
 
 to create a new branch.
-As you can see, there is currently just one directory, `TwoStep`.
-It is so-called because the code there does the Stage 1 classification in two steps: assigning the signal bin first, then doing background discrimination.
-Since doing both simultaneously in one classifier would also be possible, a `OneStep` directory might be handy at some point.
-See the readme in `TwoStep` for explanations of what each script does.
+As you can see, there is currently just one directory, `VBF`.
+There the VBF part of the analysis is run; we will add more parts later if needed.

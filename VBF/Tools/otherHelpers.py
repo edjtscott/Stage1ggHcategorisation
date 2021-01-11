@@ -1,6 +1,10 @@
 import numpy as np
 import os
 
+def run(cmd):
+  print cmd
+  os.system(cmd)
+
 def prettyHist( hist ):
     hist.SetStats(0)
     hist.GetXaxis().SetTitle('Process')
@@ -64,6 +68,7 @@ def submitJob( jobDir, theCmd, params=None, model=None, dryRun=False ):
           line = line.replace('!NAME!',outName.replace('.sh',''))
         outFile.write(line)
   subCmd = 'qsub -q hep.q -o %s -e %s -l h_vmem=24G %s' %(outName.replace('.sh','.log'), outName.replace('.sh','.err'), outName) 
+  #subCmd = 'qsub -q hep.q -o %s -e %s -l h_vmem=12G -l h_rt=8:0:0 %s' %(outName.replace('.sh','.log'), outName.replace('.sh','.err'), outName) 
   print
   print subCmd
   if not dryRun:
