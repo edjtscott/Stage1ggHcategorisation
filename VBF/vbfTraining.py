@@ -7,9 +7,10 @@ import pickle
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_auc_score, roc_curve, mean_squared_error
+from sklearn.model_selection import GridSearchCV
 from os import path, system, listdir
-from Tools.addRowFunctions import truthVBF, vbfWeight, cosThetaStar
+from Tools.addRowFunctions import truthVBF, vbfWeight, cosThetaStar, truthDipho
 
 #configure options
 from optparse import OptionParser
@@ -109,8 +110,9 @@ if not opts.dataFrame:
   if opts.useDataDriven: 
     del hdfFrame
   print 'created total frame'
-
+  
   #add the target variable and the equalised weight
+  
   trainTotal['truthVBF'] = trainTotal.apply(truthVBF,axis=1)
   trainTotal = trainTotal[trainTotal.truthVBF>-0.5]
   vbfSumW = np.sum(trainTotal[trainTotal.truthVBF==2]['weight'].values)
@@ -118,7 +120,7 @@ if not opts.dataFrame:
   bkgSumW = np.sum(trainTotal[trainTotal.truthVBF==0]['weight'].values)
   trainTotal['vbfWeight'] = trainTotal.apply(vbfWeight, axis=1, args=[vbfSumW,gghSumW,bkgSumW])
   trainTotal['dijet_centrality']=np.exp(-4.*((trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2))
-
+  
   #save as a pickle file
   if not path.isdir(frameDir): 
     system('mkdir -p %s'%frameDir)
@@ -129,6 +131,9 @@ if not opts.dataFrame:
 else:
   trainTotal = pd.read_pickle('%s/%s'%(frameDir,opts.dataFrame))
   print 'Successfully loaded the dataframe'
+
+#apply truthDipho to select background dipho data
+trainTotal['truthDipho'] = trainTotal.apply(truthDipho,axis=1)
 
 #set up train set and randomise the inputs
 trainFrac = 0.8
@@ -167,10 +172,25 @@ numClasses = 3
 trainParams['num_class'] = numClasses
 trainParams['nthread'] = 1
 #trainParams['seed'] = 123456
-#trainParams['max_depth'] = 7
+trainParams['max_depth'] = 3
 #trainParams['n_estimators'] = 300
 #trainParams['eta'] = 0.3
 #trainParams['sub_sample'] = 0.9
+
+'''
+gbm_param_grid = {
+    'learning_rate':[0.1,0.3,0.5,0.7],
+    'max_depth': [8,10,12]}
+
+gbm = xg.XGBRegressor() 
+
+grid_mse = GridSearchCV(estimator = gbm, param_grid = gbm_param_grid, scoring = 'neg_mean_squared_error', cv = 2, verbose = 1)
+
+grid_mse.fit(vbfTrainX,vbfTrainY)
+
+print("Best parameters found: ",grid_mse.best_params_)
+print("Lowest RMSE found: ", np.sqrt(np.abs(grid_mse.best_score_)))
+'''
 
 #add any specified training parameters
 paramExt = ''
@@ -198,21 +218,22 @@ print 'saved as %s/vbfDataDriven%s.model'%(modelDir,paramExt)
 #evaluate performance using area under the ROC curve
 vbfPredYtrain = vbfModel.predict(trainMatrix).reshape(vbfTrainY.shape[0],numClasses)
 vbfPredYtest  = vbfModel.predict(testMatrix).reshape(vbfTestY.shape[0],numClasses)
-vbfTruthYtrain = np.where(vbfTrainY==2, 0, 1)
-vbfTruthYtest  = np.where(vbfTestY==2, 0, 1)
+vbfTruthYtrain = np.where(vbfTrainY==2, 1, 0)
+vbfTruthYtest  = np.where(vbfTestY==2, 1, 0)
 print 'Training performance:'
-print 'area under roc curve for training set = %1.3f'%( 1.-roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
-print 'area under roc curve for test set     = %1.3f'%( 1.-roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
+print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
+print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
+
+print 'vbfpredtrain'
+print vbfPredYtrain
 
 #make some plots
-#print (type(trainTotal[trainTotal.truthVBF==2]['dipho_lead_ptoM']))
-#print(type(trainTotal[trainTotal.truthVBF==2]))
 
-var_list = []
-for (columnName, columnData) in trainTotal[trainTotal.truthVBF==2][dijetVars].iteritems():
+#var_list = []
+#for (columnName, columnData) in trainTotal[trainTotal.truthVBF==2][dijetVars].iteritems():
     #print('column name', columnName)
-    var_list.append(columnName)
-print 'var_list', var_list
+    #var_list.append(columnName)
+#print 'var_list', var_list
 
 #x_label_list =[r'$p_^1/m_{\gamma\gamma}$',r'$p^2/m_{\gamma\gamma}$',r'$p_T^{j1}$',r'$p_T^{j2}$',r'$|\Delta\eta|$',r'$m_{jj}$',r'$C_{\gamma\gamma}$',r'$|\Delta\phi_{jj}|$',r'$\Delta R_{min}(\gamma,j)$',r'$|\Delta \phi_{\gamma\gamma,jj}|$']
 
@@ -222,25 +243,62 @@ plotDir = trainDir.replace('trees','plots')
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)
 
-#roc_curve
-fpr_tr, tpr_tr, thresholds_tr = roc_curve(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW)
-fpr_tst,tpr_tst, thresholds_tst = roc_curve(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)
+
+'''
+#this does not work, as trainParams need to be specified before training, instead try gridsearch
+para_range =[4,5,6,7,8,9]
+train_score = test_score = []
+for i in para_range:
+    trainParams['max_depth'] = i
+    train_score.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW))
+    test_score.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,1],  sample_weight=vbfTestFW) )
 
 plt.figure(1)
-#plt.plot(tpr_tr,fpr_tr,label = r'training set ROC curve (area = %1.3f $\pm$ 0.001 )'%( 1.-roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW)) )
-#plt.plot(tpr_tst,fpr_tst,label = r'test set ROC curve (area = %1.3f $\pm$ 0.004)'%( 1.-roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))  )
-plt.plot(tpr_tr,fpr_tr,label = r'training set ROC curve (area = 0.923 $\pm$ 0.001)')
-plt.plot(tpr_tst,fpr_tst,label = r'test set ROC curve (area = 0.920 $\pm$ 0.004)')
+plt.plot(para_range,train_score)
+plt.plot(para_range,test_score)
+plt.xlabel('max_depth')
+plt.ylabel('ROC score')
+plt.savefig('%s/max_depth.pdf'%plotDir)
+print 'saved as %s/max_depth.pdf'%plotDir
+'''
+
+#roc_curve for ggH
+fpr_tr, tpr_tr, thresholds_tr = roc_curve(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW)
+fpr_tst,tpr_tst, thresholds_tst = roc_curve(vbfTruthYtest,  vbfPredYtest[:,1],  sample_weight=vbfTestFW)
+
+plt.figure(1)
+#plt.plot(fpr_tr,tpr_tr,label = r'training set ROC curve (area = %1.3f $\pm$ 0.001 )'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW)) )
+#plt.plot(fpr_tst,tpr_tst,label = r'test set ROC curve (area = %1.3f $\pm$ 0.004)'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,1],  sample_weight=vbfTestFW))  )
+plt.plot(fpr_tr,tpr_tr,label = r'training set ROC curve (area = 0.736 $\pm$ 0.004)')
+plt.plot(fpr_tst,tpr_tst,label = r'test set ROC curve (area = 0.734 $\pm$ 0.004)')
 plt.xlabel('False positive rate')
 plt.ylabel('True positive rate')
-plt.title('ROC curve with dipho variables')
+plt.title('ROC curve ggH with dipho variables')
 plt.legend(loc='best',prop={'size': 12})
-plt.savefig('%s/ROC_curve_wDipho.pdf'%plotDir)
-print 'saved as %s/ROC_curve_wDipho.pdf'%plotDir
+plt.savefig('%s/ROC_curve_ggH_diphovar.pdf'%plotDir)
+print 'saved as %s/ROC_curve_ggH_diphovar.pdf'%plotDir
+
+print 'Training performance ggH:'
+print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW) )
+print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,1],  sample_weight=vbfTestFW)  )
 
 
+#truthVBF==0 doesnt work as it includes all other signals
+plt.figure(2)
+#plt.hist(trainTotal[trainTotal.truthVBF==2]['dipho_mass'],bins = 50,label = 'vbf',alpha = 0.5,normed = True)
+#plt.hist(trainTotal[trainTotal.truthVBF==1]['dipho_mass'],bins = 50,label = 'ggh',alpha = 0.5,normed = True)
+tempframe = vbfPredYtrain[(vbfPredYtrain[:,2]>0) & (vbfPredYtrain[:,2]<0.3)]
+print tempframe
+plt.hist(tempframe[tempframe.truthVBF==0]['dipho_mass'],bins = 50,label = 'bkg',alpha = 0.5,normed = True)
+plt.xlabel(r'$m_{\gamma\gamma}$', size=14)
+plt.ylabel("events", size=14)
+plt.legend(loc='upper right')
+plt.savefig('%s/dipho_m_bkg.pdf'%plotDir)
+print 'saved as %s/dipho_m_bkg.pdf'%plotDir
+print tempframe
 
 
+    
 '''
 for i in range(3,len(var_list)):
     plt.figure(i+1)
