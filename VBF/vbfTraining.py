@@ -287,15 +287,21 @@ print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYt
 plt.figure(2)
 #plt.hist(trainTotal[trainTotal.truthVBF==2]['dipho_mass'],bins = 50,label = 'vbf',alpha = 0.5,normed = True)
 #plt.hist(trainTotal[trainTotal.truthVBF==1]['dipho_mass'],bins = 50,label = 'ggh',alpha = 0.5,normed = True)
-tempframe = vbfPredYtrain[(vbfPredYtrain[:,2]>0) & (vbfPredYtrain[:,2]<0.3)]
-print tempframe
-plt.hist(tempframe[tempframe.truthVBF==0]['dipho_mass'],bins = 50,label = 'bkg',alpha = 0.5,normed = True)
+vbfTrainM  = vbfTrainM*(vbfPredYtrain[:,2]>0)*(vbfPredYtrain[:,2]<0.3) #mass array * vbf score array
+print 'predytrain'
+print vbfPredYtrain
+
+print 'vbfY'
+print vbfY
+#trueProcArray = vbfPredYtrain['truthVBF'].values
+vbfTrainM = vbfTrainM*(vbfTrainY == 0)
+plt.hist(vbfTrainM,bins = 50,label = 'bkg',alpha = 0.5,normed = True)
 plt.xlabel(r'$m_{\gamma\gamma}$', size=14)
 plt.ylabel("events", size=14)
 plt.legend(loc='upper right')
 plt.savefig('%s/dipho_m_bkg.pdf'%plotDir)
 print 'saved as %s/dipho_m_bkg.pdf'%plotDir
-print tempframe
+print vbfTrainM
 
 
     
