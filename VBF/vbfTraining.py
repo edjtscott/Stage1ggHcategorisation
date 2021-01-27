@@ -147,6 +147,7 @@ vbfY  = trainTotal['truthVBF'].values
 vbfTW = trainTotal['vbfWeight'].values
 vbfFW = trainTotal['weight'].values
 vbfM  = trainTotal['dipho_mass'].values
+vbfB  = trainTotal['truthDipho'].values
 
 #do the shuffle
 vbfX  = vbfX[theShuffle]
@@ -154,6 +155,7 @@ vbfY  = vbfY[theShuffle]
 vbfTW = vbfTW[theShuffle]
 vbfFW = vbfFW[theShuffle]
 vbfM  = vbfM[theShuffle]
+vbfB  = vbfB[theShuffle]
 
 #split into train and test
 vbfTrainX,  vbfTestX  = np.split( vbfX,  [trainLimit] )
@@ -161,71 +163,63 @@ vbfTrainY,  vbfTestY  = np.split( vbfY,  [trainLimit] )
 vbfTrainTW, vbfTestTW = np.split( vbfTW, [trainLimit] )
 vbfTrainFW, vbfTestFW = np.split( vbfFW, [trainLimit] )
 vbfTrainM,  vbfTestM  = np.split( vbfM,  [trainLimit] )
-
+vbfTrainB,  vbfTestB  = np.split( vbfB,  [trainLimit] )
 
 #set up the training and testing matrices
 trainMatrix = xg.DMatrix(vbfTrainX, label=vbfTrainY, weight=vbfTrainTW, feature_names=dijetVars)
 testMatrix  = xg.DMatrix(vbfTestX, label=vbfTestY, weight=vbfTestFW, feature_names=dijetVars)
-trainParams = {}
-trainParams['objective'] = 'multi:softprob'
-numClasses = 3
-trainParams['num_class'] = numClasses
-trainParams['nthread'] = 1
+
+#loop over different values of max_depth to find optimal value
+max_depth_sc = [] #training score
+max_depth_tsc =[]
+max_depth_rg = np.arange(3,10)
+for i in max_depth_rg:
+    trainParams = {}
+    trainParams['objective'] = 'multi:softprob'
+    numClasses = 3
+    trainParams['num_class'] = numClasses
+    trainParams['nthread'] = 1
 #trainParams['seed'] = 123456
-trainParams['max_depth'] = 3
+    trainParams['max_depth'] = i
 #trainParams['n_estimators'] = 300
 #trainParams['eta'] = 0.3
 #trainParams['sub_sample'] = 0.9
 
-'''
-gbm_param_grid = {
-    'learning_rate':[0.1,0.3,0.5,0.7],
-    'max_depth': [8,10,12]}
-
-gbm = xg.XGBRegressor() 
-
-grid_mse = GridSearchCV(estimator = gbm, param_grid = gbm_param_grid, scoring = 'neg_mean_squared_error', cv = 2, verbose = 1)
-
-grid_mse.fit(vbfTrainX,vbfTrainY)
-
-print("Best parameters found: ",grid_mse.best_params_)
-print("Lowest RMSE found: ", np.sqrt(np.abs(grid_mse.best_score_)))
-'''
-
 #add any specified training parameters
-paramExt = ''
-if opts.trainParams:
-  paramExt = '__'
-  for pair in opts.trainParams:
-    key  = pair.split(':')[0]
-    data = pair.split(':')[1]
-    trainParams[key] = data
-    paramExt += '%s_%s__'%(key,data)
-  paramExt = paramExt[:-2]
+    paramExt = ''
+    if opts.trainParams:
+        paramExt = '__'
+        for pair in opts.trainParams:
+          key  = pair.split(':')[0]
+          data = pair.split(':')[1]
+          trainParams[key] = data
+          paramExt += '%s_%s__'%(key,data)
+        paramExt = paramExt[:-2]
 
 #train the BDT
-print 'about to train the dijet BDT'
-vbfModel = xg.train(trainParams, trainMatrix)
-print 'done'
+    print 'about to train the dijet BDT'
+    vbfModel = xg.train(trainParams, trainMatrix)
+    print 'done'
 
-#save it
-modelDir = trainDir.replace('trees','models')
-if not path.isdir(modelDir):
-  system('mkdir -p %s'%modelDir)
-vbfModel.save_model('%s/vbfDataDriven%s.model'%(modelDir,paramExt))
-print 'saved as %s/vbfDataDriven%s.model'%(modelDir,paramExt)
+
+    #save it
+    modelDir = trainDir.replace('trees','models')
+    if not path.isdir(modelDir):
+        system('mkdir -p %s'%modelDir)
+    #vbfModel.save_model('%s/vbfDataDriven%s.model'%(modelDir,paramExt))
+    #print 'saved as %s/vbfDataDriven%s.model'%(modelDir,paramExt)
 
 #evaluate performance using area under the ROC curve
-vbfPredYtrain = vbfModel.predict(trainMatrix).reshape(vbfTrainY.shape[0],numClasses)
-vbfPredYtest  = vbfModel.predict(testMatrix).reshape(vbfTestY.shape[0],numClasses)
-vbfTruthYtrain = np.where(vbfTrainY==2, 1, 0)
-vbfTruthYtest  = np.where(vbfTestY==2, 1, 0)
-print 'Training performance:'
-print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
-print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
-
-print 'vbfpredtrain'
-print vbfPredYtrain
+    vbfPredYtrain = vbfModel.predict(trainMatrix).reshape(vbfTrainY.shape[0],numClasses)
+    vbfPredYtest  = vbfModel.predict(testMatrix).reshape(vbfTestY.shape[0],numClasses)
+    vbfTruthYtrain = np.where(vbfTrainY==2, 1, 0)
+    vbfTruthYtest  = np.where(vbfTestY==2, 1, 0)
+    max_depth_sc.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW))
+    max_depth_tsc.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))
+    print 'Training performance:'
+    print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
+    print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
+    
 
 #make some plots
 
@@ -233,8 +227,6 @@ print vbfPredYtrain
 #for (columnName, columnData) in trainTotal[trainTotal.truthVBF==2][dijetVars].iteritems():
     #print('column name', columnName)
     #var_list.append(columnName)
-#print 'var_list', var_list
-
 #x_label_list =[r'$p_^1/m_{\gamma\gamma}$',r'$p^2/m_{\gamma\gamma}$',r'$p_T^{j1}$',r'$p_T^{j2}$',r'$|\Delta\eta|$',r'$m_{jj}$',r'$C_{\gamma\gamma}$',r'$|\Delta\phi_{jj}|$',r'$\Delta R_{min}(\gamma,j)$',r'$|\Delta \phi_{\gamma\gamma,jj}|$']
 
 
@@ -242,25 +234,6 @@ plotDir = trainDir.replace('trees','plots')
 #plotDir = '%s/%s'%(paramExt)
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)
-
-
-'''
-#this does not work, as trainParams need to be specified before training, instead try gridsearch
-para_range =[4,5,6,7,8,9]
-train_score = test_score = []
-for i in para_range:
-    trainParams['max_depth'] = i
-    train_score.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW))
-    test_score.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,1],  sample_weight=vbfTestFW) )
-
-plt.figure(1)
-plt.plot(para_range,train_score)
-plt.plot(para_range,test_score)
-plt.xlabel('max_depth')
-plt.ylabel('ROC score')
-plt.savefig('%s/max_depth.pdf'%plotDir)
-print 'saved as %s/max_depth.pdf'%plotDir
-'''
 
 #roc_curve for ggH
 fpr_tr, tpr_tr, thresholds_tr = roc_curve(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW)
@@ -287,14 +260,10 @@ print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYt
 plt.figure(2)
 #plt.hist(trainTotal[trainTotal.truthVBF==2]['dipho_mass'],bins = 50,label = 'vbf',alpha = 0.5,normed = True)
 #plt.hist(trainTotal[trainTotal.truthVBF==1]['dipho_mass'],bins = 50,label = 'ggh',alpha = 0.5,normed = True)
-vbfTrainM  = vbfTrainM*(vbfPredYtrain[:,2]>0)*(vbfPredYtrain[:,2]<0.3) #mass array * vbf score array
-print 'predytrain'
-print vbfPredYtrain
-
-print 'vbfY'
-print vbfY
+#vbfTrainM = vbfTrainM[vbfTrainB == 0]
+#vbfPredYtrain = vbfPredYtrain[vbfTrainB==0]
+#vbfTrainM  = vbfTrainM[np.logical_and(vbfPredYtrain[:,2]>0,vbfPredYtrain[:,2]<0.3)] #mass array filtered by vbf score array
 #trueProcArray = vbfPredYtrain['truthVBF'].values
-vbfTrainM = vbfTrainM*(vbfTrainY == 0)
 plt.hist(vbfTrainM,bins = 50,label = 'bkg',alpha = 0.5,normed = True)
 plt.xlabel(r'$m_{\gamma\gamma}$', size=14)
 plt.ylabel("events", size=14)
@@ -303,6 +272,46 @@ plt.savefig('%s/dipho_m_bkg.pdf'%plotDir)
 print 'saved as %s/dipho_m_bkg.pdf'%plotDir
 print vbfTrainM
 
+
+#plot background with differnt vbf score cut (check mass is not being sculpted)
+#make sure vbfTrainM not filtered before
+fig = plt.figure(3)
+axes = fig.gca()
+n_bins = [15]*6
+bdt_bins = np.linspace(0.0,0.5,num = 5)
+bdt_bins = np.append(bdt_bins,1.0)
+colors  = ['#d7191c', '#fdae61', '#f2f229', '#abdda4', '#2b83ba']
+i_hist = 0
+vbfTrainM = vbfTrainM[vbfTrainB == 0]
+vbfPredYtrain = vbfPredYtrain[vbfTrainB==0]
+#vbfTrainM  = vbfTrainM[np.logical_and(vbfPredYtrain[:,2]>0,vbfPredYtrain[:,2]<0.3)] #mass array filtered by vbf score array
+
+for ibin in range(len(bdt_bins)-1):
+    sig_cut = vbfTrainM[np.logical_and(vbfPredYtrain[:,2]> bdt_bins[ibin],vbfPredYtrain[:,2]< bdt_bins[ibin+1])]
+    print 'sig_cut'
+    print len(sig_cut)
+
+    axes.hist(sig_cut, n_bins[ibin], label='{:.2f} $<$ BDT score $<$ {:.2f}'.format(bdt_bins[ibin], bdt_bins[ibin+1]),normed = True,histtype='step',color = colors[i_hist])
+    axes.legend(loc='upper center',ncol=2,prop={'size': 10},frameon=False)
+    current_bottom, current_top = axes.get_ylim()
+    axes.set_ylim(bottom=0, top=current_top*1.1)
+    i_hist += 1
+i_hist = 0
+axes.set_xlabel('diphoton Mass')
+axes.set_ylabel('Arbitrary Units')
+fig.savefig('%s/bkg_cut.pdf'%plotDir) 
+print 'save as %s/bkg_cut.pdf'%plotDir
+
+#scatter plot of ROC score vs max_depth to see optimal value
+fig = plt.figure(4)
+axes = fig.gca()
+mtr = axes.scatter(max_depth_rg,max_depth_sc,label = 'vbfTrain',color = 'blue',marker = '.')
+mtst = axes.scatter(max_depth_rg,max_depth_tsc, label = 'vbfTest',color = 'green',marker = '.')
+axes.legend()
+axes.set_xlabel('Max depth')
+axes.set_ylabel('ROC score')
+fig.savefig('%s/max_depth.pdf'%plotDir)
+print 'save as %s/max_depth.pdf'%plotDir
 
     
 '''
