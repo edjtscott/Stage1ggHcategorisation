@@ -7,6 +7,7 @@ import pickle
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from sklearn.metrics import roc_auc_score, roc_curve, mean_squared_error
 from sklearn.model_selection import GridSearchCV
 from os import path, system, listdir
@@ -173,15 +174,18 @@ testMatrix  = xg.DMatrix(vbfTestX, label=vbfTestY, weight=vbfTestFW, feature_nam
 max_depth_sc = [] #training score
 max_depth_tsc =[]
 max_depth_rg = np.arange(3,10)
-for i in max_depth_rg:
+n_est_sc = []
+n_est_tsc = []
+n_est_rg = np.arange(100,1000,100)
+for i in n_est_rg:
     trainParams = {}
     trainParams['objective'] = 'multi:softprob'
     numClasses = 3
     trainParams['num_class'] = numClasses
     trainParams['nthread'] = 1
 #trainParams['seed'] = 123456
-    trainParams['max_depth'] = i
-#trainParams['n_estimators'] = 300
+    #trainParams['max_depth'] = i
+    trainParams['n_estimators'] = i
 #trainParams['eta'] = 0.3
 #trainParams['sub_sample'] = 0.9
 
@@ -214,8 +218,8 @@ for i in max_depth_rg:
     vbfPredYtest  = vbfModel.predict(testMatrix).reshape(vbfTestY.shape[0],numClasses)
     vbfTruthYtrain = np.where(vbfTrainY==2, 1, 0)
     vbfTruthYtest  = np.where(vbfTestY==2, 1, 0)
-    max_depth_sc.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW))
-    max_depth_tsc.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))
+    n_est_sc.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW))
+    n_est_tsc.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))
     print 'Training performance:'
     print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
     print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
@@ -302,16 +306,22 @@ axes.set_ylabel('Arbitrary Units')
 fig.savefig('%s/bkg_cut.pdf'%plotDir) 
 print 'save as %s/bkg_cut.pdf'%plotDir
 
-#scatter plot of ROC score vs max_depth to see optimal value
+#scatter plot of ROC score vs max_depth to see optimal value; extend to eta,n_estimater,subsample
+max_depth_trainerr = [0.001,0.001,0.000,0.000,0.001,0.000,0.001]
+max_depth_testerr = [0.001,0.001,0.000,0.000,0.001,0.000,0.001]
+
 fig = plt.figure(4)
+legend_elements = [Line2D([0], [0], marker='o',color='w',markerfacecolor='blue', mec = 'blue',label = 'vbfTrain',markersize=5), Line2D([0], [0], marker='o', markerfacecolor='green',color='w',label = 'vbfTest', markersize=5,mec='green')]
 axes = fig.gca()
-mtr = axes.scatter(max_depth_rg,max_depth_sc,label = 'vbfTrain',color = 'blue',marker = '.')
-mtst = axes.scatter(max_depth_rg,max_depth_tsc, label = 'vbfTest',color = 'green',marker = '.')
-axes.legend()
-axes.set_xlabel('Max depth')
+axes.scatter(n_est_rg,n_est_sc,color = 'blue',label = 'vbfTrain')
+axes.scatter(n_est_rg,n_est_tsc,color = 'green',label = 'vbfTest')
+#axes.errorbar(max_depth_rg,max_depth_sc,yerr=max_depth_trainerr)
+#axes.errorbar(max_depth_rg,max_depth_tsc,yerr = max_depth_testerr)
+axes.legend(handles=legend_elements,numpoints=1)
+axes.set_xlabel('N_estimators')
 axes.set_ylabel('ROC score')
-fig.savefig('%s/max_depth.pdf'%plotDir)
-print 'save as %s/max_depth.pdf'%plotDir
+fig.savefig('%s/n_estimators.pdf'%plotDir)
+print 'save as %s/n_estimators.pdf'%plotDir
 
     
 '''
