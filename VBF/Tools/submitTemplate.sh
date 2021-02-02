@@ -15,7 +15,7 @@ eval `scramv1 runtime -sh`
 cd $TMPDIR
 mkdir -p scratch_$RAND
 cd scratch_$RAND
-cp -p $MYDIR/*.py .
+cp -rp $MYDIR/* .
 ulimit unlimited
 ulimit -s unlimited
 echo "About to run the following command:"
