@@ -149,6 +149,7 @@ vbfTW = trainTotal['vbfWeight'].values
 vbfFW = trainTotal['weight'].values
 vbfM  = trainTotal['dipho_mass'].values
 vbfB  = trainTotal['truthDipho'].values
+vbfPM = trainTotal['dipho_lead_ptoM'].values
 
 #do the shuffle
 vbfX  = vbfX[theShuffle]
@@ -157,6 +158,7 @@ vbfTW = vbfTW[theShuffle]
 vbfFW = vbfFW[theShuffle]
 vbfM  = vbfM[theShuffle]
 vbfB  = vbfB[theShuffle]
+vbfPM = vbfPM[theShuffle]
 
 #split into train and test
 vbfTrainX,  vbfTestX  = np.split( vbfX,  [trainLimit] )
@@ -165,6 +167,7 @@ vbfTrainTW, vbfTestTW = np.split( vbfTW, [trainLimit] )
 vbfTrainFW, vbfTestFW = np.split( vbfFW, [trainLimit] )
 vbfTrainM,  vbfTestM  = np.split( vbfM,  [trainLimit] )
 vbfTrainB,  vbfTestB  = np.split( vbfB,  [trainLimit] )
+vbfTrainPM, vbfTestPM = np.split( vbfPM, [trainLimit] )
 
 #set up the training and testing matrices
 trainMatrix = xg.DMatrix(vbfTrainX, label=vbfTrainY, weight=vbfTrainTW, feature_names=dijetVars)
@@ -176,18 +179,30 @@ max_depth_tsc =[]
 max_depth_rg = np.arange(3,10)
 n_est_sc = []
 n_est_tsc = []
-n_est_rg = np.arange(100,1000,100)
-for i in n_est_rg:
+n_est_rg = np.arange(1,1000,100)
+eta_sc =[]
+eta_tsc = []
+eta_rg = np.arange(0.05,0.8,0.05)
+sub_sc = []
+sub_tsc = []
+sub_rg = np.arange(0.1,1.0,0.1)
+alpha_sc =[]
+alpha_tsc = []
+alpha_rg = np.arange(0,20,2)
+for i in range(0,1):
     trainParams = {}
+    print 'alpha'
+    print i
     trainParams['objective'] = 'multi:softprob'
     numClasses = 3
     trainParams['num_class'] = numClasses
     trainParams['nthread'] = 1
-#trainParams['seed'] = 123456
-    #trainParams['max_depth'] = i
-    trainParams['n_estimators'] = i
-#trainParams['eta'] = 0.3
-#trainParams['sub_sample'] = 0.9
+    #trainParams['seed'] = 123456
+    #trainParams['max_depth'] = 5
+    #trainParams['n_estimators'] = i
+    #trainParams['eta'] = i
+    #trainParams['subsample'] = i
+    trainParams['alpha'] = i    
 
 #add any specified training parameters
     paramExt = ''
@@ -218,8 +233,8 @@ for i in n_est_rg:
     vbfPredYtest  = vbfModel.predict(testMatrix).reshape(vbfTestY.shape[0],numClasses)
     vbfTruthYtrain = np.where(vbfTrainY==2, 1, 0)
     vbfTruthYtest  = np.where(vbfTestY==2, 1, 0)
-    n_est_sc.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW))
-    n_est_tsc.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))
+    alpha_sc.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW))
+    alpha_tsc.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))
     print 'Training performance:'
     print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
     print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
@@ -276,10 +291,37 @@ plt.savefig('%s/dipho_m_bkg.pdf'%plotDir)
 print 'saved as %s/dipho_m_bkg.pdf'%plotDir
 print vbfTrainM
 
+#plot variables with different vbf cut
+fig = plt.figure(3)
+axes = fig.gca()
+n_bins = [15]*6
+bdt_bins = np.linspace(0.0,0.5,num = 5)
+bdt_bins = np.append(bdt_bins,1.0)
+colors  = ['#d7191c', '#fdae61', '#f2f229', '#abdda4', '#2b83ba']
+i_hist = 0
+#vbf_trainvar = trainTotal[trainTotal.truthVBF==2]['dipho_lead_ptoM']
+#vbfPredYtrain = vbfPredYtrain[vbfPredYtrain['truthVBF'].values == 2]#filter does not work like this
+vbfTrainPM = vbfTrainPM[vbfTrainY == 2]
+vbfPredYtrain = vbfPredYtrain[vbfTrainY == 2]
+
+for ibin in range(len(bdt_bins)-1):
+    sig_cut = vbfTrainPM[np.logical_and(vbfPredYtrain[:,2]> bdt_bins[ibin],vbfPredYtrain[:,2]< bdt_bins[ibin+1])]
+    print 'sig_cut'
+    print len(sig_cut)
+    axes.hist(sig_cut, n_bins[ibin], label='{:.2f} $<$ BDT score $<$ {:.2f}'.format(bdt_bins[ibin], bdt_bins[ibin+1]),normed = True,histtype='step',color = colors[i_hist])
+    axes.legend(loc='upper center',ncol=2,prop={'size': 10},frameon=False)
+    current_bottom, current_top = axes.get_ylim()
+    axes.set_ylim(bottom=0, top=current_top*1.1)
+    i_hist += 1
+i_hist = 0
+axes.set_xlabel('diphoton lead ptoM')
+axes.set_ylabel('Arbitrary Units')
+fig.savefig('%s/vbfcut_dipho_lead_ptoM.pdf'%plotDir)
+print 'save as %s/vbfcut_dipho_lead_ptoM.pdf'%plotDir
 
 #plot background with differnt vbf score cut (check mass is not being sculpted)
 #make sure vbfTrainM not filtered before
-fig = plt.figure(3)
+fig = plt.figure(4)
 axes = fig.gca()
 n_bins = [15]*6
 bdt_bins = np.linspace(0.0,0.5,num = 5)
@@ -306,22 +348,23 @@ axes.set_ylabel('Arbitrary Units')
 fig.savefig('%s/bkg_cut.pdf'%plotDir) 
 print 'save as %s/bkg_cut.pdf'%plotDir
 
+
 #scatter plot of ROC score vs max_depth to see optimal value; extend to eta,n_estimater,subsample
 max_depth_trainerr = [0.001,0.001,0.000,0.000,0.001,0.000,0.001]
 max_depth_testerr = [0.001,0.001,0.000,0.000,0.001,0.000,0.001]
 
-fig = plt.figure(4)
+fig = plt.figure(5)
 legend_elements = [Line2D([0], [0], marker='o',color='w',markerfacecolor='blue', mec = 'blue',label = 'vbfTrain',markersize=5), Line2D([0], [0], marker='o', markerfacecolor='green',color='w',label = 'vbfTest', markersize=5,mec='green')]
 axes = fig.gca()
-axes.scatter(n_est_rg,n_est_sc,color = 'blue',label = 'vbfTrain')
-axes.scatter(n_est_rg,n_est_tsc,color = 'green',label = 'vbfTest')
+axes.scatter(alpha_rg,alpha_sc,color = 'blue',label = 'vbfTrain')
+axes.scatter(alpha_rg,alpha_tsc,color = 'green',label = 'vbfTest')
 #axes.errorbar(max_depth_rg,max_depth_sc,yerr=max_depth_trainerr)
 #axes.errorbar(max_depth_rg,max_depth_tsc,yerr = max_depth_testerr)
 axes.legend(handles=legend_elements,numpoints=1)
-axes.set_xlabel('N_estimators')
+axes.set_xlabel('Alpha')
 axes.set_ylabel('ROC score')
-fig.savefig('%s/n_estimators.pdf'%plotDir)
-print 'save as %s/n_estimators.pdf'%plotDir
+fig.savefig('%s/alpha.pdf'%plotDir)
+print 'save as %s/alpha.pdf'%plotDir
 
     
 '''
