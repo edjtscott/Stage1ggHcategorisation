@@ -4,6 +4,8 @@ import pandas as pd
 import xgboost as xg
 import uproot as upr
 import pickle
+import matplotlib
+import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, roc_curve
 from os import path, system, listdir
 from Tools.addRowFunctions import truthVBF, vbfWeight, cosThetaStar
@@ -17,7 +19,7 @@ from keras.optimizers import Nadam
 from keras.regularizers import l2  
 from keras.callbacks import EarlyStopping 
 from keras.utils import np_utils 
-import h5py
+#import h5py
 
 #configure options
 from optparse import OptionParser
@@ -175,68 +177,112 @@ vbfTrainYOH = np_utils.to_categorical(vbfTrainY, num_classes=numOutputs)
 vbfTestYOH  = np_utils.to_categorical(vbfTestY, num_classes=numOutputs)
 
 #build the model
-numLayers = 3
-nodesPerHiddenLayer = 200
-dropout = 0.2
-batchSize = 64
+numLayers_rg = [2,3,4]
+nodesPerHiddenLayer_rg= [400]
 
-model = Sequential()
-for i, nodes in enumerate([nodesPerHiddenLayer] * numLayers):
-  if i == 0: #first layer     
-    model.add(                
-    Dense(                    
-            nodes,            
-            kernel_initializer='glorot_normal',
-            activation='relu',
-            kernel_regularizer=l2(1e-5),
-            input_dim=numInputs
-            )                 
-    )                         
-    model.add(Dropout(dropout))
-  else: #hidden layers        
-    model.add(                
-    Dense(                    
-            nodes,            
-            kernel_initializer='glorot_normal',
-            activation='relu',
-            kernel_regularizer=l2(1e-5),
-            )                 
-    )                         
-    model.add(Dropout(dropout))
+for n in numLayers_rg:
+  for k in nodesPerHiddenLayer_rg:
+        print 'n ',n
+        print 'k ', k
+        numLayers = n
+        nodesPerHiddenLayer = k
+        dropout = 0.2
+        batchSize = 64
+
+        model = Sequential()
+#        for i, nodes in enumerate([nodesPerHiddenLayer] * numLayers):
+        for i, nodes in enumerate([k] * n):
+          if i == 0: #first layer     
+            model.add(                
+            Dense(                    
+                     nodes,            
+                     kernel_initializer='glorot_normal',
+                     activation='relu',
+                     kernel_regularizer=l2(1e-5),
+                     input_dim=numInputs
+                )                 
+            )                         
+            model.add(Dropout(dropout))
+          else: #hidden layers        
+            model.add(                
+            Dense(                    
+                    nodes,            
+                    kernel_initializer='glorot_normal',
+                    activation='relu',
+                    kernel_regularizer=l2(1e-5),
+                    )                 
+            )                         
+            model.add(Dropout(dropout))
                               
 #final layer                  
-model.add(                    
-        Dense(                
-            numOutputs,      
-            kernel_initializer=RandomNormal(),
-            activation='softmax'
-            )                 
-        )                     
+        model.add(                    
+                Dense(                
+                    numOutputs,      
+                    kernel_initializer=RandomNormal(),
+                    activation='softmax'
+                    )                 
+                )                     
                               
-model.compile(                
-        loss='categorical_crossentropy',
-        optimizer=Nadam(),    
-        metrics=['accuracy']  
-)                             
-callbacks = []                
-callbacks.append(EarlyStopping(patience=50))
-model.summary()               
+        model.compile(                
+                loss='categorical_crossentropy',
+                optimizer=Nadam(),    
+                metrics=['accuracy']  
+        )                             
+        callbacks = []                
+        callbacks.append(EarlyStopping(patience=50))
+        model.summary()               
                               
                               
 #Fit the model on data
-print('Fitting on the training data')
-history = model.fit(          
-    vbfTrainX,           
-    vbfTrainYOH,           
-    sample_weight=vbfTrainTW, 
-    #validation_data=(vbfValidX,vbfValidY, vbfValidTW),
-    batch_size=batchSize,     
-    epochs=50,              
-    shuffle=True
-    #callbacks=callbacks # add function to print stuff out there
-    )                         
-print('Done') 
+        print('Fitting on the training data')
+        history = model.fit(          
+            vbfTrainX,           
+            vbfTrainYOH,           
+            sample_weight=vbfTrainTW, 
+            #validation_data=(vbfValidX,vbfValidY, vbfValidTW),
+            batch_size=batchSize,     
+            epochs=50,              
+            shuffle=True
+            #callbacks=callbacks # add function to print stuff out there
+            )                         
+        print('Done') 
 
-yProbTest = model.predict(vbfTestX).reshape(vbfTestY.shape[0],numOutputs)
-vbfTestTrueY = np.where(vbfTestY==2, 0, 1)
-print 'area under roc curve for training set, VBF v.s. Rest = %1.3f'%( 1.-roc_auc_score(vbfTestTrueY, yProbTest[:,2], sample_weight=vbfTestFW) )
+        print('Fitting on the testing data')
+        history = model.fit(
+            vbfTestX,
+            vbfTestYOH,
+            sample_weight=vbfTestTW,
+            #validation_data=(vbfValidX,vbfValidY, vbfValidTW),
+            batch_size=batchSize,
+            epochs=50,     
+            shuffle=True
+            #callbacks=callbacks # add function to print stuff out there
+            )
+        print('Done')
+
+        yProbTrain = model.predict(vbfTrainX).reshape(vbfTrainY.shape[0],numOutputs)
+        yProbTest = model.predict(vbfTestX).reshape(vbfTestY.shape[0],numOutputs)
+        vbfTrainTrueY = np.where(vbfTrainY==2,1,0)
+        vbfTestTrueY = np.where(vbfTestY==2, 1, 0)
+        print 'area under roc curve for trianing set, VBF v.s. Rest = %1.3f'%( roc_auc_score(vbfTrainTrueY, yProbTrain[:,2], sample_weight=vbfTrainFW) )
+        print 'area under roc curve for test set, VBF v.s. Rest = %1.3f'%( roc_auc_score(vbfTestTrueY, yProbTest[:,2], sample_weight=vbfTestFW) )
+
+#make plots
+plotDir = trainDir.replace('trees','plots_DNN')
+#plotDir = '%s/%s'%(paramExt)
+if not path.isdir(plotDir): 
+  system('mkdir -p %s'%plotDir)
+
+#roc_curve vbf
+fpr_tr, tpr_tr, thresholds_tr = roc_curve(vbfTrainTrueY, yProbTrain[:,2], sample_weight=vbfTrainFW )
+fpr_tst, tpr_tst, thresholds_tst = roc_curve(vbfTestTrueY, yProbTest[:,2], sample_weight=vbfTestFW) 
+plt.figure(1)
+plt.plot(fpr_tr,tpr_tr,label = r'training set ROC curve (area = %1.3f)'%(roc_auc_score(vbfTrainTrueY, yProbTrain[:,2], sample_weight=vbfTrainFW)) )
+plt.plot(fpr_tst,tpr_tst,label = r'test set ROC curve (area = %1.3f)'%( roc_auc_score(vbfTestTrueY, yProbTest[:,2], sample_weight=vbfTestFW)) )
+plt.xlabel('False positive rate')
+plt.ylabel('True positive rate')
+plt.title('ROC curve original')
+plt.legend(loc='best',prop={'size': 12})
+plt.savefig('%s/ROC_vbf_original.pdf'%plotDir)
+print 'saved as %s/ROC_vbf_original.pdf'%plotDir
+
