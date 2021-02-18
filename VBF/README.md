@@ -1,7 +1,7 @@
 # VBF STXS stage 1.2 classification
 
 Here we train the so-called dijet BDT to output three scores per event, corresponding to how similar the event is to typical VBF, ggH, or background events.
-The name of the script is called vbfTraining.py; it does quite a few things, but most of it is simply reading in the data and selecting appropriate events.
+The name of the script is called `vbfTraining.py`; it does quite a few things, but most of it is simply reading in the data and selecting appropriate events.
 More details are given below. 
 
 The submission script, `runJobs.py`, is used because some of this is quite memory-intensive and the batch has higher limits than just running locally.
@@ -22,5 +22,11 @@ Some possible nice additions to this scipt would be:
 - performing repeated runs with different random seeds, to establish how much variance there is due to different sets of event being used
 
 ## Defining analysis categories
-We will add this later!
+
+Here we use the output score from our VBF classifier (BDT or DNN) to construct some analysis categories.
+The script that does this is `bdt_category_opt.py`.
+This reads in simulated signal samples, and Data which is used in place of background background samples.
+The number of categories, and their definitions (MVA boundaries) are chosen via a random
+search through the VBF, ggH, and bkg probs. The best set are categories are the ones which
+give us the best Average Median Signficance (similar to s/sqrt(B)).
 
