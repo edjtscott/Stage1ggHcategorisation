@@ -114,10 +114,10 @@ if not opts.dataFrame:
   trainTotal['dijet_centrality']=np.exp(-4.*((trainTotal.dijet_Zep/trainTotal.dijet_abs_dEta)**2))
 
   #save as a pickle file
-  if not path.isdir(frameDir): 
-    system('mkdir -p %s'%frameDir)
-  trainTotal.to_pickle('%s/vbfDataDriven.pkl'%frameDir)
-  print 'frame saved as %s/vbfDataDriven.pkl'%frameDir
+  #if not path.isdir(frameDir): 
+  #  system('mkdir -p %s'%frameDir)
+  #trainTotal.to_pickle('%s/vbfDataDriven.pkl'%frameDir)
+  #print 'frame saved as %s/vbfDataDriven.pkl'%frameDir
 
 #read in dataframe if above steps done before
 else:
@@ -181,8 +181,8 @@ print 'done'
 modelDir = trainDir.replace('trees','models')
 if not path.isdir(modelDir):
   system('mkdir -p %s'%modelDir)
-vbfModel.save_model('%s/vbfDataDriven%s.model'%(modelDir,paramExt))
-print 'saved as %s/vbfDataDriven%s.model'%(modelDir,paramExt)
+vbfModel.save_model('vbfDataDriven%s.model'%(paramExt))
+print 'saved as vbfDataDriven%s.model'%(paramExt)
 
 #evaluate performance using area under the ROC curve
 vbfPredYtrain = vbfModel.predict(trainMatrix).reshape(vbfTrainY.shape[0],numClasses)
