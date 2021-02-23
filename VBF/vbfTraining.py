@@ -189,20 +189,20 @@ sub_rg = np.arange(0.1,1.0,0.1)
 alpha_sc =[]
 alpha_tsc = []
 alpha_rg = np.arange(0,20,2)
-for i in range(0,1):
+for i in max_depth_rg:
     trainParams = {}
-    print 'alpha'
+    print 'max depth'
     print i
     trainParams['objective'] = 'multi:softprob'
     numClasses = 3
     trainParams['num_class'] = numClasses
     trainParams['nthread'] = 1
     #trainParams['seed'] = 123456
-    #trainParams['max_depth'] = 5
+    trainParams['max_depth'] = i
     #trainParams['n_estimators'] = i
-    #trainParams['eta'] = i
-    #trainParams['subsample'] = i
-    trainParams['alpha'] = i    
+    trainParams['eta'] = 0.4
+    #trainParams['subsample'] = 0.5
+    trainParams['alpha'] = 0    
 
 #add any specified training parameters
     paramExt = ''
@@ -233,8 +233,8 @@ for i in range(0,1):
     vbfPredYtest  = vbfModel.predict(testMatrix).reshape(vbfTestY.shape[0],numClasses)
     vbfTruthYtrain = np.where(vbfTrainY==2, 1, 0)
     vbfTruthYtest  = np.where(vbfTestY==2, 1, 0)
-    alpha_sc.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW))
-    alpha_tsc.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))
+    max_depth_sc.append(roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW))
+    max_depth_tsc.append(roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))
     print 'Training performance:'
     print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW) )
     print 'area under roc curve for test set     = %1.3f'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)  )
@@ -254,21 +254,21 @@ plotDir = trainDir.replace('trees','plots')
 if not path.isdir(plotDir): 
   system('mkdir -p %s'%plotDir)
 
-#roc_curve for ggH
-fpr_tr, tpr_tr, thresholds_tr = roc_curve(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW)
-fpr_tst,tpr_tst, thresholds_tst = roc_curve(vbfTruthYtest,  vbfPredYtest[:,1],  sample_weight=vbfTestFW)
+#roc_curve ggh:vbfPredYtrain[:,1] vbf vbfPredYtrain[:,2]
+fpr_tr, tpr_tr, thresholds_tr = roc_curve(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW)
+fpr_tst,tpr_tst, thresholds_tst = roc_curve(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW)
 
 plt.figure(1)
-#plt.plot(fpr_tr,tpr_tr,label = r'training set ROC curve (area = %1.3f $\pm$ 0.001 )'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW)) )
-#plt.plot(fpr_tst,tpr_tst,label = r'test set ROC curve (area = %1.3f $\pm$ 0.004)'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,1],  sample_weight=vbfTestFW))  )
-plt.plot(fpr_tr,tpr_tr,label = r'training set ROC curve (area = 0.736 $\pm$ 0.004)')
-plt.plot(fpr_tst,tpr_tst,label = r'test set ROC curve (area = 0.734 $\pm$ 0.004)')
+#plt.plot(fpr_tr,tpr_tr,label = r'training set ROC curve (area = %1.3f $\pm$ 0.001 )'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,2], sample_weight=vbfTrainFW)) )
+#plt.plot(fpr_tst,tpr_tst,label = r'test set ROC curve (area = %1.3f $\pm$ 0.004)'%( roc_auc_score(vbfTruthYtest,  vbfPredYtest[:,2],  sample_weight=vbfTestFW))  )
+plt.plot(fpr_tr,tpr_tr,label = r'training set ROC curve (area = 0.923 $\pm$ 0.001)')
+plt.plot(fpr_tst,tpr_tst,label = r'test set ROC curve (area = 0.920 $\pm$ 0.004)')
 plt.xlabel('False positive rate')
 plt.ylabel('True positive rate')
-plt.title('ROC curve ggH with dipho variables')
+plt.title('ROC curve with dipho variables')
 plt.legend(loc='best',prop={'size': 12})
-plt.savefig('%s/ROC_curve_ggH_diphovar.pdf'%plotDir)
-print 'saved as %s/ROC_curve_ggH_diphovar.pdf'%plotDir
+plt.savefig('%s/ROC_curve_wDipho.pdf'%plotDir)
+print 'saved as %s/ROC_curve_wDipho.pdf'%plotDir
 
 print 'Training performance ggH:'
 print 'area under roc curve for training set = %1.3f'%( roc_auc_score(vbfTruthYtrain, vbfPredYtrain[:,1], sample_weight=vbfTrainFW) )
@@ -294,9 +294,13 @@ print vbfTrainM
 #plot variables with different vbf cut
 fig = plt.figure(3)
 axes = fig.gca()
-n_bins = [15]*6
-bdt_bins = np.linspace(0.0,0.5,num = 5)
+n_bins = [17]*6
+bdt_bins = 0.0
+bdt_bins = np.append(bdt_bins,np.linspace(0.3,0.6,num = 4))
 bdt_bins = np.append(bdt_bins,1.0)
+print bdt_bins
+print 'bdtbins'
+print len(bdt_bins)
 colors  = ['#d7191c', '#fdae61', '#f2f229', '#abdda4', '#2b83ba']
 i_hist = 0
 #vbf_trainvar = trainTotal[trainTotal.truthVBF==2]['dipho_lead_ptoM']
@@ -305,6 +309,8 @@ vbfTrainPM = vbfTrainPM[vbfTrainY == 2]
 vbfPredYtrain = vbfPredYtrain[vbfTrainY == 2]
 
 for ibin in range(len(bdt_bins)-1):
+    print 'ibin'
+    print ibin
     sig_cut = vbfTrainPM[np.logical_and(vbfPredYtrain[:,2]> bdt_bins[ibin],vbfPredYtrain[:,2]< bdt_bins[ibin+1])]
     print 'sig_cut'
     print len(sig_cut)
@@ -319,6 +325,7 @@ axes.set_ylabel('Arbitrary Units')
 fig.savefig('%s/vbfcut_dipho_lead_ptoM.pdf'%plotDir)
 print 'save as %s/vbfcut_dipho_lead_ptoM.pdf'%plotDir
 
+'''
 #plot background with differnt vbf score cut (check mass is not being sculpted)
 #make sure vbfTrainM not filtered before
 fig = plt.figure(4)
@@ -347,7 +354,7 @@ axes.set_xlabel('diphoton Mass')
 axes.set_ylabel('Arbitrary Units')
 fig.savefig('%s/bkg_cut.pdf'%plotDir) 
 print 'save as %s/bkg_cut.pdf'%plotDir
-
+'''
 
 #scatter plot of ROC score vs max_depth to see optimal value; extend to eta,n_estimater,subsample
 max_depth_trainerr = [0.001,0.001,0.000,0.000,0.001,0.000,0.001]
@@ -356,15 +363,15 @@ max_depth_testerr = [0.001,0.001,0.000,0.000,0.001,0.000,0.001]
 fig = plt.figure(5)
 legend_elements = [Line2D([0], [0], marker='o',color='w',markerfacecolor='blue', mec = 'blue',label = 'vbfTrain',markersize=5), Line2D([0], [0], marker='o', markerfacecolor='green',color='w',label = 'vbfTest', markersize=5,mec='green')]
 axes = fig.gca()
-axes.scatter(alpha_rg,alpha_sc,color = 'blue',label = 'vbfTrain')
-axes.scatter(alpha_rg,alpha_tsc,color = 'green',label = 'vbfTest')
-#axes.errorbar(max_depth_rg,max_depth_sc,yerr=max_depth_trainerr)
-#axes.errorbar(max_depth_rg,max_depth_tsc,yerr = max_depth_testerr)
+axes.scatter(max_depth_rg,max_depth_sc,color = 'blue',label = 'vbfTrain')
+axes.scatter(max_depth_rg,max_depth_tsc,color = 'green',label = 'vbfTest')
+axes.errorbar(max_depth_rg,max_depth_sc,yerr=max_depth_trainerr,color = 'blue',ls='none')
+axes.errorbar(max_depth_rg,max_depth_tsc,yerr = max_depth_testerr,color = 'green',ls='none')
 axes.legend(handles=legend_elements,numpoints=1)
-axes.set_xlabel('Alpha')
+axes.set_xlabel('Max depth')
 axes.set_ylabel('ROC score')
-fig.savefig('%s/alpha.pdf'%plotDir)
-print 'save as %s/alpha.pdf'%plotDir
+fig.savefig('%s/maxdepth_werror.pdf'%plotDir)
+print 'save as %s/maxdepth_werror.pdf'%plotDir
 
     
 '''
