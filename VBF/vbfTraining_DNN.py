@@ -45,6 +45,7 @@ newVars = ['gghMVA_leadPhi','gghMVA_leadJEn','gghMVA_subleadPhi','gghMVA_Sublead
 allVarsGen += newVars
 dijetVars += newVars
 
+print dijetVars
 #including the full selection
 hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
 queryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_leadIDMVA>-0.2) and (dipho_subleadIDMVA>-0.2) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
@@ -101,6 +102,7 @@ if not opts.dataFrame:
         if proc in signals: trainTree = trainFile['vbfTagDumper/trees/%s_125_13TeV_GeneralDipho'%proc]
         elif proc in backgrounds: trainTree = trainFile['vbfTagDumper/trees/%s_13TeV_GeneralDipho'%proc]
         else: raise Exception('Error did not recognise process %s !'%proc)
+        print year, proc, fn
         tempFrame = trainTree.pandas.df(allVarsGen).query(queryString)
         tempFrame['proc'] = proc
         tempFrame.loc[:, 'weight'] = tempFrame['weight'] * lumiDict[year]
@@ -169,6 +171,8 @@ X_scaler = StandardScaler()
 X_scaler.fit(vbfTrainX)
 vbfTrainX = X_scaler.transform(vbfTrainX)
 vbfTestX = X_scaler.transform(vbfTestX)
+
+print trainTotal
 
 #convert y column with one-hot-encoding (keras only accepts this form)
 numOutputs = 3 #three classes
@@ -243,7 +247,7 @@ for n in numLayers_rg:
                 sample_weight=vbfTrainTW, 
                 #validation_data=(vbfValidX,vbfValidY, vbfValidTW),
                 batch_size=batchSize,     
-                epochs=20,              
+                epochs=10,              
                 shuffle=True
                 #callbacks=callbacks # add function to print stuff out there
                 )                         
