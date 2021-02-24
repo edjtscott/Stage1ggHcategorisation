@@ -52,7 +52,7 @@ def join_objects( X_low_level, low_level_vars_flat,newVars):
     print 'Finished creating train object vars'
     return np.array(l_to_convert, np.float32)
 
-def set_model(vbfTrainN_2D,vbfTrainX,n_lstm_layers=3, n_lstm_nodes=150, n_dense_1=1, n_nodes_dense_1=300, n_dense_2=4, n_nodes_dense_2=200, dropout_rate=0.1, learning_rate=0.001, batch_norm=True, batch_momentum=0.99):
+def set_model(newVars,dijetVars,n_lstm_layers=3, n_lstm_nodes=150, n_dense_1=1, n_nodes_dense_1=300, n_dense_2=4, n_nodes_dense_2=200, dropout_rate=0.1, learning_rate=0.001, batch_norm=True, batch_momentum=0.99):
     """
         Set hyper parameters of the network, including the general structure, learning rate, and regularisation coefficients.
         Resulting model is set as a class attribute, overwriting existing model.
@@ -79,8 +79,8 @@ def set_model(vbfTrainN_2D,vbfTrainX,n_lstm_layers=3, n_lstm_nodes=150, n_dense_
         batch_momentum : float
              momentum for the gradient descent, evaluated on a given batch
     """
-    input_objects = keras.layers.Input(shape=(len(vbfTrainN_2D),len(vbfTrainN_2D[0])), name='input_objects')
-    input_global  = keras.layers.Input(shape=(len(vbfTrainX),), name='input_global')
+    input_objects = keras.layers.Input(shape=(len(newVars),len(newVars[0])), name='input_objects')
+    input_global  = keras.layers.Input(shape=(len(dijetVars),), name='input_global')
     print 'input_objects',input_objects
     print 'input_global', input_global
     lstm = input_objects
