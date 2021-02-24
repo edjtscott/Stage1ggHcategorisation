@@ -44,9 +44,13 @@ if opts.trainParams: opts.trainParams = opts.trainParams.split(',')
 from Tools.variableDefinitions import allVarsGen, dijetVars, lumiDict
 
 #possible to add new variables(as low level input vars) here - have done some suggested ones as an example
-newVars = ['gghMVA_leadPhi','gghMVA_leadJEn','gghMVA_subleadPhi','gghMVA_SubleadJEn','gghMVA_SubsubleadJPt','gghMVA_SubsubleadJEn','gghMVA_subsubleadPhi','gghMVA_subsubleadEta']
-allVarsGen += newVars
-dijetVars #this is high level input vars
+#newVars = ['gghMVA_leadPhi','gghMVA_leadJEn','gghMVA_subleadPhi','gghMVA_SubleadJEn','gghMVA_SubsubleadJPt','gghMVA_SubsubleadJEn','gghMVA_subsubleadPhi','gghMVA_subsubleadEta']
+newVars = [['gghMVA_leadPhi','gghMVA_leadJEn'],
+            ['gghMVA_subleadPhi','gghMVA_SubleadJEn'],
+            ['gghMVA_subsubleadPhi','gghMVA_SubsubleadJEn']]
+newVars_flat = [var for sublist in newVars for var in sublist]
+allVarsGen += newVars_flat
+#dijetVars #this is high level input vars
 
 #including the full selection
 hdfQueryString = '(dipho_mass>100.) and (dipho_mass<180.) and (dipho_lead_ptoM>0.333) and (dipho_sublead_ptoM>0.25) and (dijet_LeadJPt>40.) and (dijet_SubJPt>30.) and (dijet_Mjj>250.)'
@@ -148,7 +152,7 @@ trainLimit = int(theShape*trainFrac)
 
 #define the values needed for training as numpy arrays
 vbfX  = trainTotal[dijetVars].values
-vbfN  = trainTotal[newVars].values
+vbfN  = trainTotal[newVars_flat].values
 vbfY  = trainTotal['truthVBF'].values
 vbfTW = trainTotal['vbfWeight'].values
 vbfFW = trainTotal['weight'].values
@@ -179,13 +183,13 @@ X_scaler.fit(vbfTrainN)
 vbfTrainN = X_scaler.transform(vbfTrainN)
 vbfTestN = X_scaler.transform(vbfTestN)
 
-vbfTrainN_flat = [var for sublist in vbfTrainN for var in sublist]
-vbfTestN_flat = [var for sublist in vbfTestN for var in sublist]
-vbfTrainN_2D  = join_objects(vbfTrainN,vbfTrainN_flat)
-vbfTestN_2D   = join_objects(vbfTestN,vbfTestN_flat)
+#vbfTrainN_flat = [var for sublist in vbfTrainN for var in sublist]
+#vbfTestN_flat = [var for sublist in vbfTestN for var in sublist]
+vbfTrainN_2D  = join_objects(vbfTrainN,newVars_flat,newVars)
+vbfTestN_2D   = join_objects(vbfTestN,newVars_flat,newVars)
 
 #build the model
-model=set_model(n_lstm_layers=2, n_lstm_nodes=50, n_dense_1=2, n_nodes_dense_1=100, 
+model=set_model(vbfTrainN_2D,vbfTrainX,n_lstm_layers=2, n_lstm_nodes=50, n_dense_1=2, n_nodes_dense_1=100, 
                        n_dense_2=1, n_nodes_dense_2=50, dropout_rate=0.25,
                        learning_rate=0.001, batch_norm=True, batch_momentum=0.99)
 
