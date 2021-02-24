@@ -189,7 +189,7 @@ vbfTrainN_2D  = join_objects(vbfTrainN,newVars_flat,newVars)
 vbfTestN_2D   = join_objects(vbfTestN,newVars_flat,newVars)
 
 #build the model
-model=set_model(vbfTrainN_2D,vbfTrainX,n_lstm_layers=2, n_lstm_nodes=50, n_dense_1=2, n_nodes_dense_1=100, 
+model=set_model(newVars,dijetVars,n_lstm_layers=2, n_lstm_nodes=50, n_dense_1=2, n_nodes_dense_1=100, 
                        n_dense_2=1, n_nodes_dense_2=50, dropout_rate=0.25,
                        learning_rate=0.001, batch_norm=True, batch_momentum=0.99)
 
