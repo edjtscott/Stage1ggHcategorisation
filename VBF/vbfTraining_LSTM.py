@@ -183,10 +183,16 @@ X_scaler.fit(vbfTrainN)
 vbfTrainN = X_scaler.transform(vbfTrainN)
 vbfTestN = X_scaler.transform(vbfTestN)
 
+#create 2D objects from low level variables
 #vbfTrainN_flat = [var for sublist in vbfTrainN for var in sublist]
 #vbfTestN_flat = [var for sublist in vbfTestN for var in sublist]
 vbfTrainN_2D  = join_objects(vbfTrainN,newVars_flat,newVars)
 vbfTestN_2D   = join_objects(vbfTestN,newVars_flat,newVars)
+
+#convert y column with one-hot-encoding 
+numOutputs = 3
+vbfTrainYOH = np_utils.to_categorical(vbfTrainY, num_classes=numOutputs)
+vbfTestYOH  = np_utils.to_categorical(vbfTestY, num_classes=numOutputs)
 
 #build the model
 model=set_model(newVars,dijetVars,n_lstm_layers=2, n_lstm_nodes=50, n_dense_1=2, n_nodes_dense_1=100, 
@@ -197,15 +203,17 @@ model=set_model(newVars,dijetVars,n_lstm_layers=2, n_lstm_nodes=50, n_dense_1=2,
 #callbacks.append(EarlyStopping(patience=50))
 model.summary()  
 
-epochs = 50
+
+epochs = 3
 batchSize = 64
+
 #Fit the model on data
 print('Fitting on the training data')
 history = model.fit(   
     [vbfTrainX,vbfTrainN_2D], 
-    vbfTrainY,
-    sample_weight=vbfTrainTW, 
-    batch_size=batchSize,     
+    vbfTrainYOH,
+    sample_weight = vbfTrainTW, 
+    batch_size = batchSize,     
     epochs= epochs,              
     shuffle=True
     )                         
@@ -216,11 +224,11 @@ print('Done')
 
 
 #compute ROC
-yProbTrain = model.predict([vbfTrainX,vbfTrainN_2D], batch_size=batch_size).flatten()
+yProbTrain = model.predict([vbfTrainX,vbfTrainN_2D], batch_size=batchSize).flatten()
 vbfTrainTrueY = np.where(vbfTrainY==2,1,0)
 print 'area under roc curve for trianing set, VBF v.s. Rest = %1.3f'%( roc_auc_score(vbfTrainTrueY, yProbTrain[:,2], sample_weight=vbfTrainFW) )
 
-yProbTest = model.predict([vbfTestX,vbfTestN_2D], batch_size=batch_size).flatten()
+yProbTest = model.predict([vbfTestX,vbfTestN_2D], batch_size=batchSize).flatten()
 vbfTestTrueY = np.where(vbfTestY==2, 1, 0)
 print 'area under roc curve for test set, VBF v.s. Rest = %1.3f'%( roc_auc_score(vbfTestTrueY, yProbTest[:,2], sample_weight=vbfTestFW) )
 
